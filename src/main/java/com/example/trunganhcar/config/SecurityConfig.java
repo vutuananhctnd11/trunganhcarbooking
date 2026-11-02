@@ -27,6 +27,7 @@ public class SecurityConfig {
                         // Cho phép truy cập công khai các API đặt xe, tracking và SSE
                         .requestMatchers("/api/v1/bookings/**").permitAll()
                         .requestMatchers("/api/v1/trips/**").permitAll()
+                        .requestMatchers("/api/v1/drivers/**").permitAll()
                         .requestMatchers("/api/v1/call/**").permitAll()
                         .requestMatchers("/api/v1/driver/telegram/**").permitAll()
                         .requestMatchers("/trip/**", "/index.html", "/", "/static/**").permitAll()

@@ -25,13 +25,17 @@ public class TelegramBotService {
     private final TelegramProperties properties;
     private final RestClient restClient;
     private final TripService tripService;
+    private final com.example.trunganhcar.repository.DriverRepository driverRepository;
 
     private static final DateTimeFormatter DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern("HH:mm - dd/MM/yyyy");
     private static final NumberFormat CURRENCY_FORMATTER = NumberFormat.getInstance(new Locale("vi", "VN"));
 
-    public TelegramBotService(TelegramProperties properties, @Lazy TripService tripService) {
+    public TelegramBotService(TelegramProperties properties, 
+                              @Lazy TripService tripService,
+                              com.example.trunganhcar.repository.DriverRepository driverRepository) {
         this.properties = properties;
         this.tripService = tripService;
+        this.driverRepository = driverRepository;
         this.restClient = RestClient.builder().build();
     }
 
@@ -210,16 +214,18 @@ public class TelegramBotService {
         String luggageStr = (trip.getLuggageOption() != null && !trip.getLuggageOption().isBlank()) ? trip.getLuggageOption() : "Tiêu chuẩn";
 
         String driverInfo = "";
-        if (trip.getDriver() != null) {
+        com.example.trunganhcar.entity.Driver driver = trip.getDriverId() != null 
+                ? driverRepository.findById(trip.getDriverId()).orElse(null) : null;
+        if (driver != null) {
             driverInfo = String.format("""
                     • <b>Tài xế:</b> %s (%s)
                     • <b>Xe:</b> %s (%d chỗ) - <b>%s</b>
                     """,
-                    escapeHtml(trip.getDriver().getFullName()),
-                    trip.getDriver().getPhone(),
-                    escapeHtml(trip.getDriver().getVehicleModel() != null ? trip.getDriver().getVehicleModel() : "Chưa rõ"),
-                    trip.getDriver().getSeatCount() != null ? trip.getDriver().getSeatCount() : 4,
-                    escapeHtml(trip.getDriver().getLicensePlate() != null ? trip.getDriver().getLicensePlate() : "")
+                    escapeHtml(driver.getFullName()),
+                    driver.getPhone(),
+                    escapeHtml(driver.getVehicleModel() != null ? driver.getVehicleModel() : "Chưa rõ"),
+                    driver.getSeatCount() != null ? driver.getSeatCount() : 4,
+                    escapeHtml(driver.getLicensePlate() != null ? driver.getLicensePlate() : "")
             );
         }
 

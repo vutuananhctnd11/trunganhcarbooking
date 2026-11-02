@@ -48,12 +48,6 @@ public class TripService {
 
         LocalDateTime pickupTime = request.getPickupTime() != null ? request.getPickupTime() : LocalDateTime.now();
 
-        // Kiểm tra và gán tài xế nếu khách có chỉ định driverId
-        Driver designatedDriver = null;
-        if (request.getDriverId() != null) {
-            designatedDriver = driverRepository.findById(request.getDriverId()).orElse(null);
-        }
-
         Trip trip = Trip.builder()
                 .code(code)
                 .customerName(request.getCustomerName().trim())
@@ -63,7 +57,7 @@ public class TripService {
                 .distanceKm(request.getDistanceKm())
                 .estimatedPrice(request.getEstimatedPrice())
                 .pickupTime(pickupTime)
-                .driver(designatedDriver)
+                .driverId(request.getDriverId()) // Lưu trực tiếp driverId không dùng annotation quan hệ
                 .waitHours(request.getWaitHours())
                 .isRoundTrip(Boolean.TRUE.equals(request.getIsRoundTrip()))
                 .luggageOption(request.getLuggageOption())
@@ -77,7 +71,9 @@ public class TripService {
         // Bắn sự kiện BookingCreatedEvent (Event-driven) cho Telegram bot xử lý
         eventPublisher.publishEvent(new BookingCreatedEvent(this, savedTrip));
 
-        return TripResponse.fromEntity(savedTrip, baseUrl);
+        Driver driver = savedTrip.getDriverId() != null 
+                ? driverRepository.findById(savedTrip.getDriverId()).orElse(null) : null;
+        return TripResponse.fromEntity(savedTrip, driver, baseUrl);
     }
 
     /**
@@ -86,7 +82,9 @@ public class TripService {
     @Transactional(readOnly = true)
     public TripResponse getTripByCode(String code, String baseUrl) {
         Trip trip = findTripByCode(code);
-        return TripResponse.fromEntity(trip, baseUrl);
+        Driver driver = trip.getDriverId() != null 
+                ? driverRepository.findById(trip.getDriverId()).orElse(null) : null;
+        return TripResponse.fromEntity(trip, driver, baseUrl);
     }
 
     /**
@@ -122,10 +120,10 @@ public class TripService {
         // Kiểm tra tính hợp lệ của luồng trạng thái
         validateStateTransition(oldStatus, newStatus);
 
-        // Nếu chuyến chưa có tài xế và được nhận, tìm tài xế theo telegramChatId để gán
-        if (trip.getDriver() == null && newStatus == TripStatus.CONFIRMED && telegramChatId != null) {
+        // Nếu chuyến chưa có tài xế và được nhận, tìm tài xế theo telegramChatId để gán driverId
+        if (trip.getDriverId() == null && newStatus == TripStatus.CONFIRMED && telegramChatId != null) {
             driverRepository.findByTelegramChatId(telegramChatId)
-                    .ifPresent(trip::setDriver);
+                    .ifPresent(driver -> trip.setDriverId(driver.getId()));
         }
 
         trip.setStatus(newStatus);

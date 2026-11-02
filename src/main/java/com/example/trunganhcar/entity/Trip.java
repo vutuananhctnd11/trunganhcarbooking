@@ -51,11 +51,10 @@ public class Trip {
     private LocalDateTime pickupTime;
 
     /**
-     * Tài xế nhận hoặc được gán cuốc xe
+     * ID của tài xế nhận hoặc được gán cuốc xe (lưu ID trực tiếp, không dùng annotation quan hệ)
      */
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "driver_id")
-    private Driver driver;
+    @Column(name = "driver_id")
+    private Long driverId;
 
     /**
      * Số giờ tài xế chờ khách (cho chuyến 2 chiều/khứ hồi)

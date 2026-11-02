@@ -41,8 +41,7 @@ CREATE TABLE IF NOT EXISTS trips (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     INDEX idx_trip_code (code),
     INDEX idx_trip_status (status),
-    INDEX idx_trip_driver_id (driver_id),
-    CONSTRAINT fk_trips_driver FOREIGN KEY (driver_id) REFERENCES drivers(id) ON DELETE SET NULL
+    INDEX idx_trip_driver_id (driver_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Thêm tài xế mẫu nếu chưa tồn tại

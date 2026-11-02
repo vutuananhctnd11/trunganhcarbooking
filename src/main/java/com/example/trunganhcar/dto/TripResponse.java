@@ -55,8 +55,11 @@ public class TripResponse {
     private LocalDateTime updatedAt;
 
     public static TripResponse fromEntity(Trip trip, String baseUrl) {
+        return fromEntity(trip, null, baseUrl);
+    }
+
+    public static TripResponse fromEntity(Trip trip, Driver driver, String baseUrl) {
         String base = (baseUrl != null && !baseUrl.isBlank()) ? baseUrl : "";
-        Driver driver = trip.getDriver();
 
         return TripResponse.builder()
                 .id(trip.getId())
@@ -71,8 +74,8 @@ public class TripResponse {
                 .waitHours(trip.getWaitHours())
                 .isRoundTrip(trip.getIsRoundTrip())
                 .luggageOption(trip.getLuggageOption())
-                // Thông tin tài xế
-                .driverId(driver != null ? driver.getId() : null)
+                // Thông tin tài xế (lấy từ entity Driver hoặc driverId của Trip)
+                .driverId(driver != null ? driver.getId() : trip.getDriverId())
                 .driverName(driver != null ? driver.getFullName() : null)
                 .driverPhone(driver != null ? driver.getPhone() : null)
                 .driverVehicleModel(driver != null ? driver.getVehicleModel() : null)
