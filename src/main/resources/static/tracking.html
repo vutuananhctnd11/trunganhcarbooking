@@ -374,7 +374,8 @@
                 if (!res.ok) {
                     throw new Error("Không thể tải thông tin chuyến xe");
                 }
-                const data = await res.json();
+                const result = await res.json();
+                const data = result.data ? result.data : result;
                 document.getElementById('pickupAddr').innerText = data.pickupAddress;
                 document.getElementById('dropoffAddr').innerText = data.dropoffAddress;
                 document.getElementById('customerInfo').innerText = `${data.customerName} (${data.customerPhone})`;

@@ -1,5 +1,6 @@
 package com.example.trunganhcar.config;
 
+import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -9,6 +10,7 @@ import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
@@ -17,7 +19,10 @@ import java.util.List;
 
 @Configuration
 @EnableWebSecurity
+@RequiredArgsConstructor
 public class SecurityConfig {
+
+    private final JwtAuthenticationFilter jwtAuthenticationFilter;
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
@@ -26,19 +31,24 @@ public class SecurityConfig {
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
-                        // Cho phép truy cập công khai các API đặt xe, tracking, auth và SSE
+                        // Các API yêu cầu tài xế đăng nhập
+                        .requestMatchers("/api/v1/driver/my-schedule/**").authenticated()
+
+                        // Cho phép truy cập công khai các API đặt xe, tracking, auth, discount và SSE
                         .requestMatchers("/api/v1/auth/**").permitAll()
                         .requestMatchers("/api/v1/bookings/**").permitAll()
                         .requestMatchers("/api/v1/trips/**").permitAll()
                         .requestMatchers("/api/v1/drivers/**").permitAll()
                         .requestMatchers("/api/v1/promotion-trips/**").permitAll()
                         .requestMatchers("/api/v1/banners/**").permitAll()
+                        .requestMatchers("/api/v1/discounts/**").permitAll()
                         .requestMatchers("/api/v1/call/**").permitAll()
                         .requestMatchers("/api/v1/driver/telegram/**").permitAll()
                         .requestMatchers("/trip/**", "/index.html", "/", "/static/**").permitAll()
                         .requestMatchers("/swagger-ui/**", "/v3/api-docs/**").permitAll()
                         .anyRequest().authenticated()
-                );
+                )
+                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }
@@ -61,4 +71,3 @@ public class SecurityConfig {
         return new BCryptPasswordEncoder();
     }
 }
-

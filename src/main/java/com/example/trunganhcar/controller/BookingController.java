@@ -1,5 +1,6 @@
 package com.example.trunganhcar.controller;
 
+import com.example.trunganhcar.dto.ApiResponse;
 import com.example.trunganhcar.dto.BookingRequest;
 import com.example.trunganhcar.dto.TripResponse;
 import com.example.trunganhcar.service.TripService;
@@ -22,14 +23,14 @@ public class BookingController {
 
     @Operation(summary = "Tạo đơn đặt xe mới", description = "Khách hàng tạo đơn đặt xe, sinh mã NanoID ngẫu nhiên và tự động bắn thông báo Telegram cho tài xế")
     @PostMapping
-    public ResponseEntity<TripResponse> createBooking(@RequestBody BookingRequest request, HttpServletRequest httpRequest) {
+    public ResponseEntity<ApiResponse<TripResponse>> createBooking(@RequestBody BookingRequest request, HttpServletRequest httpRequest) {
         String baseUrl = ServletUriComponentsBuilder.fromRequestUri(httpRequest)
                 .replacePath(null)
                 .build()
                 .toUriString();
 
         TripResponse response = tripService.createBooking(request, baseUrl);
-        return ResponseEntity.status(HttpStatus.CREATED).body(response);
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(ApiResponse.created("Tạo đơn đặt xe thành công", response));
     }
 }
-

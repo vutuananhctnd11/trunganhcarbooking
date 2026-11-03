@@ -1,5 +1,6 @@
 package com.example.trunganhcar.controller;
 
+import com.example.trunganhcar.dto.ApiResponse;
 import com.example.trunganhcar.dto.TripResponse;
 import com.example.trunganhcar.service.SseService;
 import com.example.trunganhcar.service.TripService;
@@ -25,7 +26,7 @@ public class TripController {
 
     @Operation(summary = "Lấy thông tin chuyến đi", description = "Lấy chi tiết đơn hàng cho trang tracking của khách hàng qua mã chuyến (NanoID)")
     @GetMapping("/{code}")
-    public ResponseEntity<TripResponse> getTrip(
+    public ResponseEntity<ApiResponse<TripResponse>> getTrip(
             @Parameter(description = "Mã chuyến xe NanoID, ví dụ: aB3dE5gH7j") @PathVariable String code, 
             HttpServletRequest httpRequest) {
         String baseUrl = ServletUriComponentsBuilder.fromRequestUri(httpRequest)
@@ -34,7 +35,7 @@ public class TripController {
                 .toUriString();
 
         TripResponse trip = tripService.getTripByCode(code, baseUrl);
-        return ResponseEntity.ok(trip);
+        return ResponseEntity.ok(ApiResponse.success(trip));
     }
 
     @Operation(summary = "Đăng ký kết nối SSE realtime", description = "Mở kết nối Server-Sent Events (SSE) để nhận sự thay đổi trạng thái cuốc xe không cần F5")
@@ -46,4 +47,3 @@ public class TripController {
         return sseService.subscribe(code);
     }
 }
-

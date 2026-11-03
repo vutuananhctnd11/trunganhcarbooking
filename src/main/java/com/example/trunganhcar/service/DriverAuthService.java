@@ -5,6 +5,8 @@ import com.example.trunganhcar.dto.DriverLoginRequest;
 import com.example.trunganhcar.dto.DriverRegisterRequest;
 import com.example.trunganhcar.dto.DriverResponse;
 import com.example.trunganhcar.entity.Driver;
+import com.example.trunganhcar.exception.CustomException;
+import com.example.trunganhcar.exception.ErrorCode;
 import com.example.trunganhcar.repository.DriverRepository;
 import com.example.trunganhcar.util.JwtTokenProvider;
 import lombok.RequiredArgsConstructor;
@@ -35,19 +37,19 @@ public class DriverAuthService {
         String cleanPlate = request.getLicensePlate().trim().toUpperCase();
 
         if (cleanPhone.isBlank()) {
-            throw new IllegalArgumentException("Số điện thoại không được để trống!");
+            throw new CustomException("Số điện thoại không được để trống!");
         }
 
         if (driverRepository.findByPhone(cleanPhone).isPresent()) {
-            throw new IllegalArgumentException("Số điện thoại này đã được đăng ký tài xế trong hệ thống!");
+            throw new CustomException(ErrorCode.PHONE_ALREADY_EXISTS);
         }
 
         if (driverRepository.findByLicensePlate(cleanPlate).isPresent()) {
-            throw new IllegalArgumentException("Biển số xe này đã tồn tại trong hệ thống!");
+            throw new CustomException(ErrorCode.LICENSE_PLATE_ALREADY_EXISTS);
         }
 
         if (request.getPassword() == null || request.getPassword().trim().length() < 6) {
-            throw new IllegalArgumentException("Mật khẩu phải có tối thiểu 6 ký tự!");
+            throw new CustomException("Mật khẩu phải có tối thiểu 6 ký tự!");
         }
 
         // Tự động xác định số chỗ ngồi theo dòng xe
@@ -90,10 +92,10 @@ public class DriverAuthService {
         log.info("Xử lý đăng nhập tài xế SĐT: {}", cleanPhone);
 
         Driver driver = driverRepository.findByPhone(cleanPhone)
-                .orElseThrow(() -> new IllegalArgumentException("Số điện thoại hoặc mật khẩu không chính xác!"));
+                .orElseThrow(() -> new CustomException(ErrorCode.INVALID_CREDENTIALS));
 
         if (driver.getPassword() == null || !passwordEncoder.matches(request.getPassword(), driver.getPassword())) {
-            throw new IllegalArgumentException("Số điện thoại hoặc mật khẩu không chính xác!");
+            throw new CustomException(ErrorCode.INVALID_CREDENTIALS);
         }
 
         String token = jwtTokenProvider.generateToken(driver.getId(), driver.getPhone(), driver.getFullName());
@@ -136,4 +138,3 @@ public class DriverAuthService {
                 .build();
     }
 }
-

@@ -8,6 +8,8 @@ import com.example.trunganhcar.entity.Trip;
 import com.example.trunganhcar.enums.TripStatus;
 import com.example.trunganhcar.event.BookingCreatedEvent;
 import com.example.trunganhcar.event.TripStatusChangedEvent;
+import com.example.trunganhcar.exception.CustomException;
+import com.example.trunganhcar.exception.ErrorCode;
 import com.example.trunganhcar.repository.DriverRepository;
 import com.example.trunganhcar.repository.PromotionTripRepository;
 import com.example.trunganhcar.repository.TripRepository;
@@ -143,7 +145,7 @@ public class TripService {
     @Transactional(readOnly = true)
     public Trip findTripByCode(String code) {
         return tripRepository.findByCode(code)
-                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy chuyến đi với mã: " + code));
+                .orElseThrow(() -> new CustomException(ErrorCode.TRIP_NOT_FOUND, "Không tìm thấy chuyến đi với mã: " + code));
     }
 
     /**
@@ -200,7 +202,7 @@ public class TripService {
         }
 
         if (current == TripStatus.COMPLETED || current == TripStatus.CANCELLED) {
-            throw new IllegalStateException("Chuyến đi đã kết thúc (" + current + "), không thể thay đổi trạng thái nữa.");
+            throw new CustomException(ErrorCode.INVALID_TRIP_STATUS, "Chuyến đi đã kết thúc (" + current + "), không thể thay đổi trạng thái nữa.");
         }
 
         boolean valid = switch (current) {
@@ -212,8 +214,7 @@ public class TripService {
         };
 
         if (!valid) {
-            throw new IllegalStateException(String.format("Không thể chuyển trạng thái từ %s sang %s", current, target));
+            throw new CustomException(ErrorCode.INVALID_TRIP_STATUS, String.format("Không thể chuyển trạng thái từ %s sang %s", current, target));
         }
     }
 }
-

@@ -3,6 +3,8 @@ package com.example.trunganhcar.service;
 import com.example.trunganhcar.dto.BannerRequest;
 import com.example.trunganhcar.dto.BannerResponse;
 import com.example.trunganhcar.entity.Banner;
+import com.example.trunganhcar.exception.CustomException;
+import com.example.trunganhcar.exception.ErrorCode;
 import com.example.trunganhcar.repository.BannerRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -144,7 +146,6 @@ public class BannerService {
 
     public Banner findBannerById(Long id) {
         return bannerRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy banner với ID: " + id));
+                .orElseThrow(() -> new CustomException(ErrorCode.BANNER_NOT_FOUND, "Không tìm thấy banner với ID: " + id));
     }
 }
-

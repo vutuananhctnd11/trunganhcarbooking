@@ -1,5 +1,6 @@
 package com.example.trunganhcar.controller;
 
+import com.example.trunganhcar.dto.ApiResponse;
 import com.example.trunganhcar.dto.DriverAuthResponse;
 import com.example.trunganhcar.dto.DriverLoginRequest;
 import com.example.trunganhcar.dto.DriverRegisterRequest;
@@ -25,25 +26,25 @@ public class DriverAuthController {
     @Operation(summary = "Đăng ký tài xế mới", 
                description = "Đăng ký tài xế mới với họ tên, số điện thoại, biển số xe, dòng xe VinFast và mật khẩu tự nhập")
     @PostMapping("/register")
-    public ResponseEntity<DriverAuthResponse> register(@RequestBody DriverRegisterRequest request) {
+    public ResponseEntity<ApiResponse<DriverAuthResponse>> register(@RequestBody DriverRegisterRequest request) {
         DriverAuthResponse response = driverAuthService.register(request);
-        return ResponseEntity.status(HttpStatus.CREATED).body(response);
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(ApiResponse.created("Đăng ký tài xế thành công", response));
     }
 
     @Operation(summary = "Đăng nhập tài xế", 
                description = "Đăng nhập vào Cổng tài xế bằng Số điện thoại và Mật khẩu")
     @PostMapping("/login")
-    public ResponseEntity<DriverAuthResponse> login(@RequestBody DriverLoginRequest request) {
+    public ResponseEntity<ApiResponse<DriverAuthResponse>> login(@RequestBody DriverLoginRequest request) {
         DriverAuthResponse response = driverAuthService.login(request);
-        return ResponseEntity.ok(response);
+        return ResponseEntity.ok(ApiResponse.success("Đăng nhập thành công", response));
     }
 
     @Operation(summary = "Đăng nhập nhanh tài xế mẫu (Vào xem ngay)", 
                description = "Đăng nhập tức thì với tài xế mẫu Trung Anh (Chủ xe) - SĐT: 0362.882.882")
     @PostMapping("/demo")
-    public ResponseEntity<DriverAuthResponse> loginDemo() {
+    public ResponseEntity<ApiResponse<DriverAuthResponse>> loginDemo() {
         DriverAuthResponse response = driverAuthService.loginDemoDriver();
-        return ResponseEntity.ok(response);
+        return ResponseEntity.ok(ApiResponse.success("Đăng nhập tài xế mẫu thành công", response));
     }
 }
-

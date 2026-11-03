@@ -34,5 +34,20 @@ public interface TripRepository extends JpaRepository<Trip, Long> {
             @Param("startOfDay") LocalDateTime startOfDay,
             @Param("endOfDay") LocalDateTime endOfDay
     );
-}
 
+    /**
+     * Tìm danh sách các chuyến xe của tài xế trong một khoảng thời gian (không tính chuyến đã CANCELLED)
+     */
+    @Query("""
+        SELECT t FROM Trip t 
+        WHERE t.driverId = :driverId 
+          AND t.status <> com.example.trunganhcar.enums.TripStatus.CANCELLED
+          AND t.pickupTime >= :startDateTime AND t.pickupTime <= :endDateTime
+        ORDER BY t.pickupTime ASC
+    """)
+    List<Trip> findTripsForDriverBetween(
+            @Param("driverId") Long driverId,
+            @Param("startDateTime") LocalDateTime startDateTime,
+            @Param("endDateTime") LocalDateTime endDateTime
+    );
+}

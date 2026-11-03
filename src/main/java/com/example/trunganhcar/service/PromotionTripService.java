@@ -3,17 +3,22 @@ package com.example.trunganhcar.service;
 import com.example.trunganhcar.dto.PromotionTripRequest;
 import com.example.trunganhcar.dto.PromotionTripResponse;
 import com.example.trunganhcar.entity.PromotionTrip;
+import com.example.trunganhcar.exception.CustomException;
+import com.example.trunganhcar.exception.ErrorCode;
 import com.example.trunganhcar.repository.PromotionTripRepository;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.text.Normalizer;
+import java.util.List;
 import java.util.Locale;
 import java.util.regex.Pattern;
 
@@ -73,6 +78,21 @@ public class PromotionTripService {
     }
 
     /**
+     * Lấy tối đa 3 gói chuyến cố định theo displayOrder tăng dần (dành cho hiển thị giao diện trang chủ)
+     */
+    @Transactional(readOnly = true)
+    public List<PromotionTripResponse> getTopPromotionTrips(Boolean isActive) {
+        Pageable pageable = PageRequest.of(0, 3, Sort.by(Sort.Direction.ASC, "displayOrder"));
+        Page<PromotionTrip> page;
+        if (isActive != null) {
+            page = promotionTripRepository.findByIsActive(isActive, pageable);
+        } else {
+            page = promotionTripRepository.findAll(pageable);
+        }
+        return page.map(PromotionTripResponse::fromEntity).getContent();
+    }
+
+    /**
      * Lấy danh sách các gói chuyến cố định có phân trang (Hỗ trợ lọc theo isActive)
      */
     @Transactional(readOnly = true)
@@ -101,7 +121,7 @@ public class PromotionTripService {
     @Transactional(readOnly = true)
     public PromotionTripResponse getPromotionTripBySlug(String slug) {
         PromotionTrip entity = promotionTripRepository.findBySlug(slug)
-                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy gói chuyến cố định với slug: " + slug));
+                .orElseThrow(() -> new CustomException(ErrorCode.PROMOTION_TRIP_NOT_FOUND, "Không tìm thấy gói chuyến cố định với slug: " + slug));
         return PromotionTripResponse.fromEntity(entity);
     }
 
@@ -119,7 +139,7 @@ public class PromotionTripService {
         if (request.getSlug() != null && !request.getSlug().isBlank()) {
             String newSlug = toSlug(request.getSlug());
             if (!newSlug.equals(entity.getSlug()) && promotionTripRepository.existsBySlug(newSlug)) {
-                throw new IllegalArgumentException("Đường dẫn slug này đã tồn tại: " + newSlug);
+                throw new CustomException(ErrorCode.CONFLICT, "Đường dẫn slug này đã tồn tại: " + newSlug);
             }
             entity.setSlug(newSlug);
         }
@@ -182,7 +202,7 @@ public class PromotionTripService {
 
     public PromotionTrip findPromotionTripById(Long id) {
         return promotionTripRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy gói chuyến cố định với ID: " + id));
+                .orElseThrow(() -> new CustomException(ErrorCode.PROMOTION_TRIP_NOT_FOUND, "Không tìm thấy gói chuyến cố định với ID: " + id));
     }
 
     private String serializeFeatures(Object features) {
@@ -209,4 +229,3 @@ public class PromotionTripService {
         return slug.toLowerCase(Locale.ENGLISH);
     }
 }
-

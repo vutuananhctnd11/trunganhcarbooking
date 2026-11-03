@@ -1,5 +1,6 @@
 package com.example.trunganhcar.controller;
 
+import com.example.trunganhcar.dto.ApiResponse;
 import com.example.trunganhcar.dto.BannerRequest;
 import com.example.trunganhcar.dto.BannerResponse;
 import com.example.trunganhcar.service.BannerService;
@@ -28,49 +29,49 @@ public class BannerController {
     @Operation(summary = "Lấy danh sách banner trang chủ cho Frontend", 
                description = "Trả về danh sách các banner đang ACTIVE và trong thời hạn hiển thị, sắp xếp theo displayOrder tăng dần")
     @GetMapping
-    public ResponseEntity<List<BannerResponse>> getActiveBanners() {
+    public ResponseEntity<ApiResponse<List<BannerResponse>>> getActiveBanners() {
         List<BannerResponse> response = bannerService.getActiveBanners();
-        return ResponseEntity.ok(response);
+        return ResponseEntity.ok(ApiResponse.success(response));
     }
 
     @Operation(summary = "Lấy danh sách tất cả banner (Quản trị, có phân trang)")
     @GetMapping("/all")
-    public ResponseEntity<Page<BannerResponse>> getAllBanners(
+    public ResponseEntity<ApiResponse<Page<BannerResponse>>> getAllBanners(
             @Parameter(description = "Lọc theo trạng thái (ACTIVE / INACTIVE)")
             @RequestParam(required = false) String status,
             @PageableDefault(size = 10, sort = "displayOrder", direction = Sort.Direction.ASC) Pageable pageable) {
         Page<BannerResponse> response = bannerService.getAllBanners(status, pageable);
-        return ResponseEntity.ok(response);
+        return ResponseEntity.ok(ApiResponse.success(response));
     }
 
     @Operation(summary = "Lấy chi tiết banner theo ID")
     @GetMapping("/{id}")
-    public ResponseEntity<BannerResponse> getBannerById(@PathVariable Long id) {
+    public ResponseEntity<ApiResponse<BannerResponse>> getBannerById(@PathVariable Long id) {
         BannerResponse response = bannerService.getBannerById(id);
-        return ResponseEntity.ok(response);
+        return ResponseEntity.ok(ApiResponse.success(response));
     }
 
     @Operation(summary = "Tạo mới banner")
     @PostMapping
-    public ResponseEntity<BannerResponse> createBanner(@RequestBody BannerRequest request) {
+    public ResponseEntity<ApiResponse<BannerResponse>> createBanner(@RequestBody BannerRequest request) {
         BannerResponse response = bannerService.createBanner(request);
-        return ResponseEntity.status(HttpStatus.CREATED).body(response);
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(ApiResponse.created("Tạo mới banner thành công", response));
     }
 
     @Operation(summary = "Cập nhật banner")
     @PutMapping("/{id}")
-    public ResponseEntity<BannerResponse> updateBanner(
+    public ResponseEntity<ApiResponse<BannerResponse>> updateBanner(
             @PathVariable Long id, 
             @RequestBody BannerRequest request) {
         BannerResponse response = bannerService.updateBanner(id, request);
-        return ResponseEntity.ok(response);
+        return ResponseEntity.ok(ApiResponse.success("Cập nhật banner thành công", response));
     }
 
     @Operation(summary = "Xóa banner")
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteBanner(@PathVariable Long id) {
+    public ResponseEntity<ApiResponse<Void>> deleteBanner(@PathVariable Long id) {
         bannerService.deleteBanner(id);
-        return ResponseEntity.noContent().build();
+        return ResponseEntity.ok(ApiResponse.success("Xóa banner thành công", null));
     }
 }
-

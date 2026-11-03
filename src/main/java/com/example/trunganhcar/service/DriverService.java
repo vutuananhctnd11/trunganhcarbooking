@@ -1,5 +1,6 @@
 package com.example.trunganhcar.service;
 
+import com.example.trunganhcar.dto.DriverDailyTripCountDto;
 import com.example.trunganhcar.dto.DriverRequest;
 import com.example.trunganhcar.dto.DriverResponse;
 import com.example.trunganhcar.dto.DriverScheduleResponse;
@@ -7,6 +8,8 @@ import com.example.trunganhcar.dto.DriverScheduleResponse.BusyTripDto;
 import com.example.trunganhcar.dto.DriverScheduleResponse.DriverSummaryDto;
 import com.example.trunganhcar.entity.Driver;
 import com.example.trunganhcar.entity.Trip;
+import com.example.trunganhcar.exception.CustomException;
+import com.example.trunganhcar.exception.ErrorCode;
 import com.example.trunganhcar.repository.DriverRepository;
 import com.example.trunganhcar.repository.TripRepository;
 import lombok.RequiredArgsConstructor;
@@ -14,12 +17,15 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -40,12 +46,12 @@ public class DriverService {
         log.info("Tạo tài xế mới: {} - SĐT: {}", request.getFullName(), request.getPhone());
 
         if (driverRepository.findByPhone(request.getPhone()).isPresent()) {
-            throw new IllegalArgumentException("Số điện thoại này đã được đăng ký cho tài xế khác!");
+            throw new CustomException(ErrorCode.PHONE_ALREADY_EXISTS);
         }
 
         if (request.getLicensePlate() != null && !request.getLicensePlate().isBlank()) {
             if (driverRepository.findByLicensePlate(request.getLicensePlate().trim()).isPresent()) {
-                throw new IllegalArgumentException("Biển số xe này đã tồn tại trong hệ thống!");
+                throw new CustomException(ErrorCode.LICENSE_PLATE_ALREADY_EXISTS);
             }
         }
 
@@ -98,7 +104,7 @@ public class DriverService {
         if (request.getPhone() != null && !request.getPhone().isBlank() && !request.getPhone().equals(driver.getPhone())) {
             driverRepository.findByPhone(request.getPhone()).ifPresent(existing -> {
                 if (!existing.getId().equals(id)) {
-                    throw new IllegalArgumentException("Số điện thoại mới đã được sử dụng bởi tài xế khác!");
+                    throw new CustomException(ErrorCode.PHONE_ALREADY_EXISTS, "Số điện thoại mới đã được sử dụng bởi tài xế khác!");
                 }
             });
             driver.setPhone(request.getPhone().trim());
@@ -107,7 +113,7 @@ public class DriverService {
         if (request.getLicensePlate() != null && !request.getLicensePlate().isBlank() && !request.getLicensePlate().equalsIgnoreCase(driver.getLicensePlate())) {
             driverRepository.findByLicensePlate(request.getLicensePlate().trim().toUpperCase()).ifPresent(existing -> {
                 if (!existing.getId().equals(id)) {
-                    throw new IllegalArgumentException("Biển số xe mới đã tồn tại trên hệ thống!");
+                    throw new CustomException(ErrorCode.LICENSE_PLATE_ALREADY_EXISTS, "Biển số xe mới đã tồn tại trên hệ thống!");
                 }
             });
             driver.setLicensePlate(request.getLicensePlate().trim().toUpperCase());
@@ -209,6 +215,62 @@ public class DriverService {
     }
 
     /**
+     * API xem số chuyến mỗi ngày trong 30 ngày tới của tài xế
+     */
+    @Transactional(readOnly = true)
+    public List<DriverDailyTripCountDto> getMyScheduleSummaryNext30Days(Long driverId) {
+        log.info("Lấy tóm tắt số chuyến 30 ngày tới cho tài xế ID: {}", driverId);
+        findDriverById(driverId); // Kiểm tra tài xế có tồn tại
+
+        LocalDate today = LocalDate.now();
+        LocalDate endDate = today.plusDays(29);
+
+        LocalDateTime startDateTime = today.atStartOfDay();
+        LocalDateTime endDateTime = endDate.atTime(LocalTime.MAX);
+
+        List<Trip> trips = tripRepository.findTripsForDriverBetween(driverId, startDateTime, endDateTime);
+
+        // Gom nhóm số lượng cuốc xe theo ngày
+        Map<LocalDate, Long> countByDate = trips.stream()
+                .collect(Collectors.groupingBy(t -> t.getPickupTime().toLocalDate(), Collectors.counting()));
+
+        List<DriverDailyTripCountDto> result = new ArrayList<>(30);
+        for (int i = 0; i < 30; i++) {
+            LocalDate currentDate = today.plusDays(i);
+            long tripCount = countByDate.getOrDefault(currentDate, 0L);
+
+            result.add(DriverDailyTripCountDto.builder()
+                    .date(currentDate.format(DATE_FORMATTER))
+                    .dayOfWeek(formatDayOfWeekVietnamese(currentDate.getDayOfWeek()))
+                    .tripCount(tripCount)
+                    .isToday(i == 0)
+                    .build());
+        }
+
+        return result;
+    }
+
+    /**
+     * API xem chi tiết lịch trình trong hôm nay của tài xế
+     */
+    @Transactional(readOnly = true)
+    public DriverScheduleResponse getMyScheduleToday(Long driverId) {
+        return getDriverSchedule(driverId, LocalDate.now());
+    }
+
+    private String formatDayOfWeekVietnamese(DayOfWeek dayOfWeek) {
+        return switch (dayOfWeek) {
+            case MONDAY -> "Thứ Hai";
+            case TUESDAY -> "Thứ Ba";
+            case WEDNESDAY -> "Thứ Tư";
+            case THURSDAY -> "Thứ Năm";
+            case FRIDAY -> "Thứ Sáu";
+            case SATURDAY -> "Thứ Bảy";
+            case SUNDAY -> "Chủ Nhật";
+        };
+    }
+
+    /**
      * Tính toán các khung giờ còn trống (không trùng với bất kỳ chuyến bận nào của tài xế)
      */
     private List<String> calculateAvailableSlots(LocalDate date, List<Trip> busyTrips) {
@@ -266,7 +328,6 @@ public class DriverService {
     @Transactional(readOnly = true)
     public Driver findDriverById(Long id) {
         return driverRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy tài xế với ID: " + id));
+                .orElseThrow(() -> new CustomException(ErrorCode.DRIVER_NOT_FOUND, "Không tìm thấy tài xế với ID: " + id));
     }
 }
-
