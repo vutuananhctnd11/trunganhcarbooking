@@ -21,7 +21,11 @@ public class BookingRequest {
 
     private String pickupAddress;
 
+    private String pickupCoordinates;
+
     private String dropoffAddress;
+
+    private String dropoffCoordinates;
 
     private BigDecimal distanceKm;
 
@@ -36,7 +40,21 @@ public class BookingRequest {
 
     private Boolean isRoundTrip;
 
+    private Boolean isFixedTrip;
+
+    private String fixedTripTitle;
+
+    private Long promotionTripId;
+
+    private String discountCode;
+
+    private BigDecimal discountAmount;
+
     private String luggageOption;
+
+    private Long travelTime;
+
+    private Long bufferMinutes;
 
     private String note;
 }

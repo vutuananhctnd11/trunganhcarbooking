@@ -29,6 +29,12 @@ public class Driver {
     @Column(nullable = false, unique = true, length = 20)
     private String phone;
 
+    /**
+     * Mật khẩu đăng nhập (mã hóa BCrypt)
+     */
+    @Column(length = 255)
+    private String password;
+
     @Column(name = "experience_years")
     private Integer experienceYears;
 
@@ -43,6 +49,12 @@ public class Driver {
 
     @Column(name = "telegram_chat_id", length = 50)
     private String telegramChatId;
+
+    /**
+     * Đường dẫn ảnh đại diện / chân dung của tài xế
+     */
+    @Column(name = "avatar_url", length = 500)
+    private String avatarUrl;
 
     @Column(name = "rating")
     @Builder.Default

@@ -38,8 +38,14 @@ public class Trip {
     @Column(name = "pickup_address", nullable = false)
     private String pickupAddress;
 
+    @Column(name = "pickup_coordinates", nullable = false)
+    private String pickupCoordinates;
+
     @Column(name = "dropoff_address", nullable = false)
     private String dropoffAddress;
+
+    @Column(name = "dropoff_coordinates", nullable = false)
+    private String dropoffCoordinates;
 
     @Column(name = "distance_km", precision = 6, scale = 2)
     private BigDecimal distanceKm;
@@ -50,33 +56,64 @@ public class Trip {
     @Column(name = "pickup_time", nullable = false)
     private LocalDateTime pickupTime;
 
-    /**
-     * ID của tài xế nhận hoặc được gán cuốc xe (lưu ID trực tiếp, không dùng annotation quan hệ)
-     */
     @Column(name = "driver_id")
     private Long driverId;
 
-    /**
-     * Số giờ tài xế chờ khách (cho chuyến 2 chiều/khứ hồi)
-     */
     @Column(name = "wait_hours")
     private Double waitHours;
 
-    /**
-     * Chuyến đi khứ hồi (2 chiều) hay 1 chiều
-     */
     @Column(name = "is_round_trip")
     @Builder.Default
     private Boolean isRoundTrip = false;
 
     /**
-     * Tùy chọn hành lý: Ít, Vừa, Nhiều hành lý/Cồng kềnh
+     * Đánh dấu có phải chuyến cố định theo gói cước quảng cáo không
      */
+    @Column(name = "is_fixed_trip")
+    @Builder.Default
+    private Boolean isFixedTrip = false;
+
+    /**
+     * Tên gói cước chuyến cố định (VD: "Đưa Đón Sân Bay Nội Bài")
+     */
+    @Column(name = "fixed_trip_title", length = 150)
+    private String fixedTripTitle;
+
+    /**
+     * ID của gói cước trong bảng promotion_trips (lưu ID trực tiếp, không dùng annotation quan hệ)
+     */
+    @Column(name = "promotion_trip_id")
+    private Long promotionTripId;
+
+    /**
+     * Mã giảm giá áp dụng (nếu có, VD: "VIETMAP50K")
+     */
+    @Column(name = "discount_code", length = 50)
+    private String discountCode;
+
+    /**
+     * Số tiền được giảm giá (VD: 50000)
+     */
+    @Column(name = "discount_amount", precision = 12, scale = 2)
+    private BigDecimal discountAmount;
+
     @Column(name = "luggage_option", length = 100)
     private String luggageOption;
 
     @Column(columnDefinition = "TEXT")
     private String note;
+
+    //notethời gian di chuyển trong chuyến
+    @Column(name = "travel_time")
+    private Long travelTime;
+
+    //thời gian chờ giữa các chuyến
+    @Column(name = "buffer_minutes", nullable = false, columnDefinition = "integer default 30")
+    private Long bufferMinutes;
+
+    //thời gian bận trong chuyến
+    @Column(name = "busy_until")
+    private LocalDateTime busyUntil;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 30)

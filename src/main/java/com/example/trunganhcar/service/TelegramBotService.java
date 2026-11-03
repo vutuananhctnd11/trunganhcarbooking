@@ -30,7 +30,7 @@ public class TelegramBotService {
     private static final DateTimeFormatter DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern("HH:mm - dd/MM/yyyy");
     private static final NumberFormat CURRENCY_FORMATTER = NumberFormat.getInstance(new Locale("vi", "VN"));
 
-    public TelegramBotService(TelegramProperties properties, 
+    public TelegramBotService(TelegramProperties properties,
                               @Lazy TripService tripService,
                               com.example.trunganhcar.repository.DriverRepository driverRepository) {
         this.properties = properties;
@@ -213,6 +213,20 @@ public class TelegramBotService {
         String waitHoursStr = (trip.getWaitHours() != null && trip.getWaitHours() > 0) ? trip.getWaitHours() + " giờ" : "Không chờ";
         String luggageStr = (trip.getLuggageOption() != null && !trip.getLuggageOption().isBlank()) ? trip.getLuggageOption() : "Tiêu chuẩn";
 
+        // Thông tin gói cước chuyến cố định
+        String fixedTripInfo = "";
+        if (Boolean.TRUE.equals(trip.getIsFixedTrip()) && trip.getFixedTripTitle() != null && !trip.getFixedTripTitle().isBlank()) {
+            fixedTripInfo = String.format("• <b>Gói cước cố định:</b> 🎯 <b>%s</b>\n", escapeHtml(trip.getFixedTripTitle()));
+        }
+
+        // Thông tin giảm giá / voucher
+        String discountInfo = "";
+        if (trip.getDiscountAmount() != null && trip.getDiscountAmount().compareTo(java.math.BigDecimal.ZERO) > 0) {
+            String codeStr = (trip.getDiscountCode() != null && !trip.getDiscountCode().isBlank()) 
+                    ? " (Mã: <code>" + escapeHtml(trip.getDiscountCode()) + "</code>)" : "";
+            discountInfo = String.format("• <b>Giảm giá:</b> -%s VNĐ%s\n", CURRENCY_FORMATTER.format(trip.getDiscountAmount()), codeStr);
+        }
+
         String driverInfo = "";
         com.example.trunganhcar.entity.Driver driver = trip.getDriverId() != null 
                 ? driverRepository.findById(trip.getDriverId()).orElse(null) : null;
@@ -236,11 +250,11 @@ public class TelegramBotService {
                 • <b>Điểm đón:</b> %s
                 • <b>Điểm đến:</b> %s
                 • <b>Giờ đón:</b> %s
-                • <b>Loại chuyến:</b> %s
+                %s• <b>Loại chuyến:</b> %s
                 • <b>Thời gian chờ:</b> %s
                 • <b>Hành lý:</b> %s
                 • <b>Quãng đường:</b> %s
-                • <b>Giá dự kiến:</b> <b>%s</b>
+                %s• <b>Giá dự kiến:</b> <b>%s</b>
                 %s• <b>Ghi chú:</b> %s
                 • <b>Trạng thái:</b> <i>%s</i>
                 """.formatted(
@@ -250,10 +264,12 @@ public class TelegramBotService {
                 escapeHtml(trip.getPickupAddress()),
                 escapeHtml(trip.getDropoffAddress()),
                 pickupTimeStr,
+                fixedTripInfo,
                 tripTypeStr,
                 waitHoursStr,
                 escapeHtml(luggageStr),
                 distanceStr,
+                discountInfo,
                 priceStr,
                 driverInfo,
                 escapeHtml(noteStr),

@@ -33,6 +33,9 @@ public class DriverRequest {
     @Schema(description = "Chat ID trên Telegram của tài xế", example = "123456789")
     private String telegramChatId;
 
+    @Schema(description = "Đường dẫn ảnh đại diện/chân dung của tài xế", example = "https://trunganhcar.vn/uploads/drivers/avatar-1.jpg")
+    private String avatarUrl;
+
     @Schema(description = "Đánh giá chất lượng (1-5 sao)", example = "5.0")
     private Double rating;
 

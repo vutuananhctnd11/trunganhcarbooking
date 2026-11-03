@@ -3,11 +3,13 @@ package com.example.trunganhcar.service;
 import com.example.trunganhcar.dto.BookingRequest;
 import com.example.trunganhcar.dto.TripResponse;
 import com.example.trunganhcar.entity.Driver;
+import com.example.trunganhcar.entity.PromotionTrip;
 import com.example.trunganhcar.entity.Trip;
 import com.example.trunganhcar.enums.TripStatus;
 import com.example.trunganhcar.event.BookingCreatedEvent;
 import com.example.trunganhcar.event.TripStatusChangedEvent;
 import com.example.trunganhcar.repository.DriverRepository;
+import com.example.trunganhcar.repository.PromotionTripRepository;
 import com.example.trunganhcar.repository.TripRepository;
 import com.example.trunganhcar.util.NanoIdUtils;
 import lombok.RequiredArgsConstructor;
@@ -25,6 +27,7 @@ public class TripService {
 
     private final TripRepository tripRepository;
     private final DriverRepository driverRepository;
+    private final PromotionTripRepository promotionTripRepository;
     private final ApplicationEventPublisher eventPublisher;
 
     /**
@@ -48,18 +51,65 @@ public class TripService {
 
         LocalDateTime pickupTime = request.getPickupTime() != null ? request.getPickupTime() : LocalDateTime.now();
 
+        // Xử lý thời gian di chuyển, bufferMinutes (mặc định 30 phút) và tính busyUntil
+        Long bufferMinutes = request.getBufferMinutes() != null ? request.getBufferMinutes() : 30L;
+        Long travelTime = request.getTravelTime() != null ? request.getTravelTime() : 0L;
+        LocalDateTime busyUntil = pickupTime.plusMinutes(travelTime).plusMinutes(bufferMinutes);
+
+        // Đảm bảo tọa độ không bị null theo ràng buộc database
+        String pickupCoords = request.getPickupCoordinates() != null ? request.getPickupCoordinates().trim() : "";
+        String dropoffCoords = request.getDropoffCoordinates() != null ? request.getDropoffCoordinates().trim() : "";
+
+        // Xử lý gói cước chuyến cố định theo chương trình quảng cáo
+        boolean isFixed = Boolean.TRUE.equals(request.getIsFixedTrip());
+        Long promoTripId = null;
+        String fixedTitle = null;
+        String dropoffAddress = request.getDropoffAddress() != null ? request.getDropoffAddress().trim() : "";
+
+        if (isFixed) {
+            promoTripId = request.getPromotionTripId();
+            fixedTitle = request.getFixedTripTitle();
+            if (promoTripId != null) {
+                PromotionTrip promoTrip = promotionTripRepository.findById(promoTripId).orElse(null);
+                if (promoTrip != null) {
+                    if (fixedTitle == null || fixedTitle.isBlank()) {
+                        fixedTitle = promoTrip.getTitle();
+                    }
+                    // Đồng bộ địa chỉ trả khách từ gói cước cố định nếu request không truyền
+                    if (dropoffAddress.isBlank() && promoTrip.getDropoffAddress() != null) {
+                        dropoffAddress = promoTrip.getDropoffAddress();
+                    }
+                    // Đồng bộ thời gian di chuyển từ gói cước cố định nếu request không truyền
+                    if (travelTime <= 0 && promoTrip.getTravelTime() != null) {
+                        travelTime = promoTrip.getTravelTime().longValue();
+                        busyUntil = pickupTime.plusMinutes(travelTime).plusMinutes(bufferMinutes);
+                    }
+                }
+            }
+        }
+
         Trip trip = Trip.builder()
                 .code(code)
                 .customerName(request.getCustomerName().trim())
                 .customerPhone(request.getCustomerPhone().trim())
                 .pickupAddress(request.getPickupAddress().trim())
-                .dropoffAddress(request.getDropoffAddress().trim())
+                .pickupCoordinates(pickupCoords)
+                .dropoffAddress(dropoffAddress)
+                .dropoffCoordinates(dropoffCoords)
                 .distanceKm(request.getDistanceKm())
                 .estimatedPrice(request.getEstimatedPrice())
                 .pickupTime(pickupTime)
+                .travelTime(travelTime)
+                .bufferMinutes(bufferMinutes)
+                .busyUntil(busyUntil)
                 .driverId(request.getDriverId()) // Lưu trực tiếp driverId không dùng annotation quan hệ
                 .waitHours(request.getWaitHours())
                 .isRoundTrip(Boolean.TRUE.equals(request.getIsRoundTrip()))
+                .isFixedTrip(isFixed)
+                .fixedTripTitle(fixedTitle)
+                .promotionTripId(promoTripId)
+                .discountCode(request.getDiscountCode())
+                .discountAmount(request.getDiscountAmount())
                 .luggageOption(request.getLuggageOption())
                 .note(request.getNote())
                 .status(TripStatus.PENDING)

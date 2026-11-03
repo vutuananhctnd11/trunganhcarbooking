@@ -23,6 +23,7 @@ public class DriverResponse {
     private Integer seatCount;
     private String licensePlate;
     private String telegramChatId;
+    private String avatarUrl;
     private Double rating;
     private Boolean isActive;
 
@@ -43,6 +44,7 @@ public class DriverResponse {
                 .seatCount(driver.getSeatCount())
                 .licensePlate(driver.getLicensePlate())
                 .telegramChatId(driver.getTelegramChatId())
+                .avatarUrl(driver.getAvatarUrl())
                 .rating(driver.getRating())
                 .isActive(driver.getIsActive())
                 .createdAt(driver.getCreatedAt())

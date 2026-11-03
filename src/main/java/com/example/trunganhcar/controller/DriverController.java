@@ -2,15 +2,18 @@ package com.example.trunganhcar.controller;
 
 import com.example.trunganhcar.dto.DriverRequest;
 import com.example.trunganhcar.dto.DriverResponse;
+import com.example.trunganhcar.dto.DriverScheduleResponse;
 import com.example.trunganhcar.service.DriverService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDate;
 import java.util.List;
 
 @Tag(name = "4. Driver Management APIs", description = "Các API CRUD quản lý thông tin tài xế và phương tiện")
@@ -50,6 +53,18 @@ public class DriverController {
             @PathVariable Long id,
             @RequestBody DriverRequest request) {
         DriverResponse response = driverService.updateDriver(id, request);
+        return ResponseEntity.ok(response);
+    }
+
+    @Operation(summary = "Lấy lịch trình tài xế theo ngày", 
+               description = "Lấy danh sách các chuyến bận (busy_trips) và các khung giờ còn trống (available_slots) của tài xế theo ngày được chọn")
+    @GetMapping("/{id}/schedule")
+    public ResponseEntity<DriverScheduleResponse> getDriverSchedule(
+            @Parameter(description = "ID của tài xế", example = "1")
+            @PathVariable Long id,
+            @Parameter(description = "Ngày cần xem lịch (định dạng yyyy-MM-dd, mặc định hôm nay nếu để trống)", example = "2026-11-19")
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
+        DriverScheduleResponse response = driverService.getDriverSchedule(id, date);
         return ResponseEntity.ok(response);
     }
 

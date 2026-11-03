@@ -22,16 +22,29 @@ public class TripResponse {
     private String customerName;
     private String customerPhone;
     private String pickupAddress;
+    private String pickupCoordinates;
     private String dropoffAddress;
+    private String dropoffCoordinates;
     private BigDecimal distanceKm;
     private BigDecimal estimatedPrice;
 
     @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
     private LocalDateTime pickupTime;
 
+    // Thời gian di chuyển & bận
+    private Long travelTime;
+    private Long bufferMinutes;
+    @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
+    private LocalDateTime busyUntil;
+
     // Các thông tin mở rộng của chuyến đi
     private Double waitHours;
     private Boolean isRoundTrip;
+    private Boolean isFixedTrip;
+    private String fixedTripTitle;
+    private Long promotionTripId;
+    private String discountCode;
+    private BigDecimal discountAmount;
     private String luggageOption;
 
     // Thông tin tài xế (nếu đã nhận chuyến hoặc được gán)
@@ -67,12 +80,22 @@ public class TripResponse {
                 .customerName(trip.getCustomerName())
                 .customerPhone(trip.getCustomerPhone())
                 .pickupAddress(trip.getPickupAddress())
+                .pickupCoordinates(trip.getPickupCoordinates())
                 .dropoffAddress(trip.getDropoffAddress())
+                .dropoffCoordinates(trip.getDropoffCoordinates())
                 .distanceKm(trip.getDistanceKm())
                 .estimatedPrice(trip.getEstimatedPrice())
                 .pickupTime(trip.getPickupTime())
+                .travelTime(trip.getTravelTime())
+                .bufferMinutes(trip.getBufferMinutes())
+                .busyUntil(trip.getBusyUntil())
                 .waitHours(trip.getWaitHours())
                 .isRoundTrip(trip.getIsRoundTrip())
+                .isFixedTrip(trip.getIsFixedTrip())
+                .fixedTripTitle(trip.getFixedTripTitle())
+                .promotionTripId(trip.getPromotionTripId())
+                .discountCode(trip.getDiscountCode())
+                .discountAmount(trip.getDiscountAmount())
                 .luggageOption(trip.getLuggageOption())
                 // Thông tin tài xế (lấy từ entity Driver hoặc driverId của Trip)
                 .driverId(driver != null ? driver.getId() : trip.getDriverId())
