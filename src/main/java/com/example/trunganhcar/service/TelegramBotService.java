@@ -475,8 +475,8 @@ public class TelegramBotService {
                 ));
                 rows.add(List.of(
                         InlineKeyboardButton.builder()
-                                .text("💬 Nhắn Zalo cho khách")
-                                .url(buildZaloChatUrl(trip, driver.getFullName()))
+                                .text("🗺️ Chỉ đường GG Map")
+                                .url(buildGoogleMapsUrl(trip))
                                 .build(),
                         buildCallCustomerButton(trip)
                 ));
