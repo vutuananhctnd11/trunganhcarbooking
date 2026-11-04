@@ -20,6 +20,7 @@ public class DriverResponse {
     private String phone;
     private Integer experienceYears;
     private String vehicleModel;
+    private String vehicleColor;
     private Integer seatCount;
     private String licensePlate;
     private String telegramChatId;
@@ -41,6 +42,7 @@ public class DriverResponse {
                 .phone(driver.getPhone())
                 .experienceYears(driver.getExperienceYears())
                 .vehicleModel(driver.getVehicleModel())
+                .vehicleColor(driver.getVehicleColor())
                 .seatCount(driver.getSeatCount())
                 .licensePlate(driver.getLicensePlate())
                 .telegramChatId(driver.getTelegramChatId())
@@ -52,4 +54,3 @@ public class DriverResponse {
                 .build();
     }
 }
-

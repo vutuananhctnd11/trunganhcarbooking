@@ -161,7 +161,6 @@ public class DiscountService {
                 .originalPrice(tripPrice)
                 .discountAmount(discountAmount)
                 .finalPrice(finalPrice)
-                .discount(DiscountResponse.fromEntity(discount))
                 .build();
     }
 

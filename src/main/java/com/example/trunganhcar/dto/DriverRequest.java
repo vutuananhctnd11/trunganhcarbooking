@@ -24,6 +24,9 @@ public class DriverRequest {
     @Schema(description = "Dòng xe / loại xe", example = "Toyota Fortuner 2022")
     private String vehicleModel;
 
+    @Schema(description = "Màu sơn của xe", example = "🔴 Đỏ Crimson (Đỏ đô ánh kim)")
+    private String vehicleColor;
+
     @Schema(description = "Số lượng chỗ ngồi", example = "7")
     private Integer seatCount;
 
@@ -42,4 +45,3 @@ public class DriverRequest {
     @Schema(description = "Trạng thái sẵn sàng hoạt động", example = "true")
     private Boolean isActive;
 }
-

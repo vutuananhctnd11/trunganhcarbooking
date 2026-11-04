@@ -34,7 +34,7 @@ public class DriverAuthService {
         log.info("Xử lý đăng ký tài xế mới: {} - SĐT: {}", request.getFullName(), request.getPhone());
 
         String cleanPhone = request.getPhone().trim().replaceAll("[^0-9]", "");
-        String cleanPlate = request.getLicensePlate().trim().toUpperCase();
+        String cleanPlate = com.example.trunganhcar.util.LicensePlateUtils.formatLicensePlate(request.getLicensePlate());
 
         if (cleanPhone.isBlank()) {
             throw new CustomException("Số điện thoại không được để trống!");
@@ -64,6 +64,7 @@ public class DriverAuthService {
                 .phone(cleanPhone)
                 .licensePlate(cleanPlate)
                 .vehicleModel(request.getVehicleModel().trim())
+                .vehicleColor(request.getVehicleColor() != null ? request.getVehicleColor().trim() : "🔴 Đỏ Crimson (Đỏ đô ánh kim)")
                 .seatCount(seatCount)
                 .password(passwordEncoder.encode(request.getPassword().trim()))
                 .experienceYears(1)

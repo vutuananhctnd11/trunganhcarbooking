@@ -1,6 +1,6 @@
 -- Thêm tài xế mẫu nếu chưa tồn tại (tài xế demo theo ảnh)
-INSERT INTO drivers (full_name, phone, password, experience_years, vehicle_model, seat_count, license_plate, is_active)
-SELECT 'Trung Anh (Chủ xe)', '0362882882', '$2a$10$N.zmdr9k7uOCQb376NoUnuTJ8iAt6Z5EHsM8lE9lBOsl7iKTVKIUi', 5, 'VinFast VF e34', 5, '30K - 868.86', TRUE
+INSERT INTO drivers (full_name, phone, password, experience_years, vehicle_model, seat_count, license_plate, is_active, vehicle_color, bio)
+SELECT 'Trung Anh', '0362882882', '$2a$10$N.zmdr9k7uOCQb376NoUnuTJ8iAt6Z5EHsM8lE9lBOsl7iKTVKIUi', 8, 'VinFast VF e34 (Limo Green Edition)', 5, '35H - 182.29', TRUE, '🔴 Đỏ Crimson (Đỏ đô ánh kim)', 'Kinh nghiệm 8+ năm • Lái xe cẩn thận, chu đáo'
 WHERE NOT EXISTS (SELECT 1 FROM drivers WHERE phone = '0362882882');
 
 -- Thêm gói cước chuyến cố định mẫu theo ảnh nếu chưa tồn tại
@@ -64,3 +64,8 @@ WHERE NOT EXISTS (SELECT 1 FROM discounts WHERE code = 'TRUNGANH50K');
 INSERT INTO discounts (code, title, description, discount_type, discount_value, max_discount_amount, min_trip_price, is_active)
 SELECT 'WELCOME10', 'Giảm 10% khách hàng mới', 'Giảm 10% tối đa 100.000đ cho khách hàng đặt xe lần đầu', 'PERCENTAGE', 10.00, 100000.00, 150000.00, TRUE
 WHERE NOT EXISTS (SELECT 1 FROM discounts WHERE code = 'WELCOME10');
+
+
+INSERT INTO discounts (code, title, description, discount_type, discount_value, min_trip_price, is_active)
+SELECT 'BANMOI', 'Voucher giảm 50.000đ cho bạn mới', 'Áp dụng cho mọi chuyến đi', 'FIXED_AMOUNT', 50000.00, 0.00, TRUE
+WHERE NOT EXISTS (SELECT 1 FROM discounts WHERE code = 'BANMOI');

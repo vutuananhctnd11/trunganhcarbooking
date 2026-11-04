@@ -2,8 +2,6 @@ package com.example.trunganhcar.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
-import org.hibernate.annotations.CreationTimestamp;
-import org.hibernate.annotations.UpdateTimestamp;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.LastModifiedDate;
 
@@ -43,6 +41,12 @@ public class Driver {
     @Column(name = "vehicle_model", length = 100)
     private String vehicleModel;
 
+    @Column(name = "vehicle_color", length = 100)
+    private String vehicleColor;
+
+    @Column(name = "bio", length = 255)
+    private String bio;
+
     @Column(name = "seat_count")
     private Integer seatCount;
 
@@ -74,4 +78,3 @@ public class Driver {
     @Column(name = "updated_at", nullable = true)
     private LocalDateTime updatedAt;
 }
-

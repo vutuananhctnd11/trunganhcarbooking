@@ -7,6 +7,7 @@ import com.example.trunganhcar.service.TripService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -23,7 +24,7 @@ public class BookingController {
 
     @Operation(summary = "Tạo đơn đặt xe mới", description = "Khách hàng tạo đơn đặt xe, sinh mã NanoID ngẫu nhiên và tự động bắn thông báo Telegram cho tài xế")
     @PostMapping
-    public ResponseEntity<ApiResponse<TripResponse>> createBooking(@RequestBody BookingRequest request, HttpServletRequest httpRequest) {
+    public ResponseEntity<ApiResponse<TripResponse>> createBooking(@Valid @RequestBody BookingRequest request, HttpServletRequest httpRequest) {
         String baseUrl = ServletUriComponentsBuilder.fromRequestUri(httpRequest)
                 .replacePath(null)
                 .build()

@@ -1,5 +1,7 @@
 package com.example.trunganhcar.dto;
 
+import com.example.trunganhcar.annotation.ValidBookingRequest;
+import com.example.trunganhcar.annotation.ValidPhoneNumber;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -13,10 +15,12 @@ import java.time.LocalDateTime;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
+@ValidBookingRequest
 public class BookingRequest {
 
     private String customerName;
 
+    @ValidPhoneNumber
     private String customerPhone;
 
     private String pickupAddress;
@@ -42,13 +46,9 @@ public class BookingRequest {
 
     private Boolean isFixedTrip;
 
-    private String fixedTripTitle;
-
     private Long promotionTripId;
 
     private String discountCode;
-
-    private BigDecimal discountAmount;
 
     private String luggageOption;
 
@@ -57,5 +57,7 @@ public class BookingRequest {
     private Long bufferMinutes;
 
     private String note;
+
+    private String pushNotification;
 }
 

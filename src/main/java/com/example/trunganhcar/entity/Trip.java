@@ -68,36 +68,11 @@ public class Trip {
     @Builder.Default
     private Boolean isRoundTrip = false;
 
-    /**
-     * Đánh dấu có phải chuyến cố định theo gói cước quảng cáo không
-     */
-    @Column(name = "is_fixed_trip")
-    @Builder.Default
-    private Boolean isFixedTrip = false;
-
-    /**
-     * Tên gói cước chuyến cố định (VD: "Đưa Đón Sân Bay Nội Bài")
-     */
-    @Column(name = "fixed_trip_title", length = 150)
-    private String fixedTripTitle;
-
-    /**
-     * ID của gói cước trong bảng promotion_trips (lưu ID trực tiếp, không dùng annotation quan hệ)
-     */
     @Column(name = "promotion_trip_id")
     private Long promotionTripId;
 
-    /**
-     * Mã giảm giá áp dụng (nếu có, VD: "VIETMAP50K")
-     */
     @Column(name = "discount_code", length = 50)
     private String discountCode;
-
-    /**
-     * Số tiền được giảm giá (VD: 50000)
-     */
-    @Column(name = "discount_amount", precision = 12, scale = 2)
-    private BigDecimal discountAmount;
 
     @Column(name = "luggage_option", length = 100)
     private String luggageOption;
@@ -120,6 +95,9 @@ public class Trip {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 30)
     private TripStatus status;
+
+    @Column(name = "push_notificationtrip", columnDefinition = "TEXT")
+    private String pushNotification;
 
     @CreatedDate
     @Column(name = "created_at", updatable = false, nullable = true)

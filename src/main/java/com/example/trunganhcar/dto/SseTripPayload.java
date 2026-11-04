@@ -17,6 +17,7 @@ public class SseTripPayload {
     private TripStatus status;
     private String statusDescription;
     private String message;
+    private String trackingUrl;
     private LocalDateTime timestamp;
 }
 

@@ -28,6 +28,9 @@ public class DriverController {
     @Operation(summary = "Tạo mới tài xế", description = "Thêm tài xế mới kèm thông tin xe, biển số, kinh nghiệm và chat ID telegram")
     @PostMapping
     public ResponseEntity<ApiResponse<DriverResponse>> createDriver(@RequestBody DriverRequest request) {
+        if (request.getLicensePlate() != null) {
+            request.setLicensePlate(com.example.trunganhcar.util.LicensePlateUtils.formatLicensePlate(request.getLicensePlate()));
+        }
         DriverResponse response = driverService.createDriver(request);
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.created("Tạo mới tài xế thành công", response));
@@ -54,6 +57,9 @@ public class DriverController {
     public ResponseEntity<ApiResponse<DriverResponse>> updateDriver(
             @PathVariable Long id,
             @RequestBody DriverRequest request) {
+        if (request.getLicensePlate() != null) {
+            request.setLicensePlate(com.example.trunganhcar.util.LicensePlateUtils.formatLicensePlate(request.getLicensePlate()));
+        }
         DriverResponse response = driverService.updateDriver(id, request);
         return ResponseEntity.ok(ApiResponse.success("Cập nhật thông tin tài xế thành công", response));
     }

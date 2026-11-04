@@ -88,6 +88,20 @@ public class SseService {
     }
 
     /**
+     * Bắn thông báo Web Push / Realtime trực tiếp tới khách hàng
+     */
+    public void sendInAppNotification(String tripCode, String title, String message, String trackingUrl) {
+        SseTripPayload payload = SseTripPayload.builder()
+                .tripCode(tripCode)
+                .statusDescription(title)
+                .message(message)
+                .trackingUrl(trackingUrl)
+                .timestamp(java.time.LocalDateTime.now())
+                .build();
+        sendTripUpdate(tripCode, payload);
+    }
+
+    /**
      * Dọn dẹp emitter khi client ngắt kết nối
      */
     private void removeEmitter(String tripCode, SseEmitter emitter) {

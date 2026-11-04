@@ -50,7 +50,9 @@ public class DriverService {
         }
 
         if (request.getLicensePlate() != null && !request.getLicensePlate().isBlank()) {
-            if (driverRepository.findByLicensePlate(request.getLicensePlate().trim()).isPresent()) {
+            String formattedPlate = com.example.trunganhcar.util.LicensePlateUtils.formatLicensePlate(request.getLicensePlate());
+            request.setLicensePlate(formattedPlate);
+            if (driverRepository.findByLicensePlate(formattedPlate).isPresent()) {
                 throw new CustomException(ErrorCode.LICENSE_PLATE_ALREADY_EXISTS);
             }
         }
@@ -60,6 +62,7 @@ public class DriverService {
                 .phone(request.getPhone().trim())
                 .experienceYears(request.getExperienceYears())
                 .vehicleModel(request.getVehicleModel())
+                .vehicleColor(request.getVehicleColor())
                 .seatCount(request.getSeatCount() != null ? request.getSeatCount() : 4)
                 .licensePlate(request.getLicensePlate() != null ? request.getLicensePlate().trim().toUpperCase() : null)
                 .telegramChatId(request.getTelegramChatId())
@@ -111,12 +114,14 @@ public class DriverService {
         }
 
         if (request.getLicensePlate() != null && !request.getLicensePlate().isBlank() && !request.getLicensePlate().equalsIgnoreCase(driver.getLicensePlate())) {
-            driverRepository.findByLicensePlate(request.getLicensePlate().trim().toUpperCase()).ifPresent(existing -> {
+            String formattedPlate = com.example.trunganhcar.util.LicensePlateUtils.formatLicensePlate(request.getLicensePlate());
+            request.setLicensePlate(formattedPlate);
+            driverRepository.findByLicensePlate(formattedPlate).ifPresent(existing -> {
                 if (!existing.getId().equals(id)) {
                     throw new CustomException(ErrorCode.LICENSE_PLATE_ALREADY_EXISTS, "Biển số xe mới đã tồn tại trên hệ thống!");
                 }
             });
-            driver.setLicensePlate(request.getLicensePlate().trim().toUpperCase());
+            driver.setLicensePlate(formattedPlate);
         }
 
         if (request.getFullName() != null && !request.getFullName().isBlank()) {
@@ -127,6 +132,9 @@ public class DriverService {
         }
         if (request.getVehicleModel() != null) {
             driver.setVehicleModel(request.getVehicleModel().trim());
+        }
+        if (request.getVehicleColor() != null) {
+            driver.setVehicleColor(request.getVehicleColor().trim());
         }
         if (request.getSeatCount() != null) {
             driver.setSeatCount(request.getSeatCount());

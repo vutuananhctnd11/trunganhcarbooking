@@ -10,6 +10,7 @@ import com.example.trunganhcar.event.BookingCreatedEvent;
 import com.example.trunganhcar.event.TripStatusChangedEvent;
 import com.example.trunganhcar.exception.CustomException;
 import com.example.trunganhcar.exception.ErrorCode;
+import com.example.trunganhcar.repository.DiscountRepository;
 import com.example.trunganhcar.repository.DriverRepository;
 import com.example.trunganhcar.repository.PromotionTripRepository;
 import com.example.trunganhcar.repository.TripRepository;
@@ -20,6 +21,7 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Service
@@ -31,6 +33,9 @@ public class TripService {
     private final DriverRepository driverRepository;
     private final PromotionTripRepository promotionTripRepository;
     private final ApplicationEventPublisher eventPublisher;
+    private final PricingService pricingService;
+    private final DiscountService discountService;
+    private final DiscountRepository discountRepository;
 
     /**
      * Tạo chuyến đi mới cho khách hàng
@@ -56,38 +61,77 @@ public class TripService {
         // Xử lý thời gian di chuyển, bufferMinutes (mặc định 30 phút) và tính busyUntil
         Long bufferMinutes = request.getBufferMinutes() != null ? request.getBufferMinutes() : 30L;
         Long travelTime = request.getTravelTime() != null ? request.getTravelTime() : 0L;
-        LocalDateTime busyUntil = pickupTime.plusMinutes(travelTime).plusMinutes(bufferMinutes);
 
         // Đảm bảo tọa độ không bị null theo ràng buộc database
         String pickupCoords = request.getPickupCoordinates() != null ? request.getPickupCoordinates().trim() : "";
         String dropoffCoords = request.getDropoffCoordinates() != null ? request.getDropoffCoordinates().trim() : "";
 
         // Xử lý gói cước chuyến cố định theo chương trình quảng cáo
-        boolean isFixed = Boolean.TRUE.equals(request.getIsFixedTrip());
+        boolean isFixed = Boolean.TRUE.equals(request.getIsFixedTrip()) || request.getPromotionTripId() != null;
         Long promoTripId = null;
         String fixedTitle = null;
         String dropoffAddress = request.getDropoffAddress() != null ? request.getDropoffAddress().trim() : "";
+        boolean isRoundTrip = Boolean.TRUE.equals(request.getIsRoundTrip());
 
-        if (isFixed) {
+        BigDecimal calculatedBasePrice;
+
+        if (isFixed && request.getPromotionTripId() != null) {
             promoTripId = request.getPromotionTripId();
-            fixedTitle = request.getFixedTripTitle();
-            if (promoTripId != null) {
-                PromotionTrip promoTrip = promotionTripRepository.findById(promoTripId).orElse(null);
-                if (promoTrip != null) {
-                    if (fixedTitle == null || fixedTitle.isBlank()) {
-                        fixedTitle = promoTrip.getTitle();
-                    }
-                    // Đồng bộ địa chỉ trả khách từ gói cước cố định nếu request không truyền
-                    if (dropoffAddress.isBlank() && promoTrip.getDropoffAddress() != null) {
-                        dropoffAddress = promoTrip.getDropoffAddress();
-                    }
-                    // Đồng bộ thời gian di chuyển từ gói cước cố định nếu request không truyền
-                    if (travelTime <= 0 && promoTrip.getTravelTime() != null) {
-                        travelTime = promoTrip.getTravelTime().longValue();
-                        busyUntil = pickupTime.plusMinutes(travelTime).plusMinutes(bufferMinutes);
-                    }
+            PromotionTrip promoTrip = promotionTripRepository.findById(promoTripId).orElse(null);
+            if (promoTrip != null) {
+                if (fixedTitle == null || fixedTitle.isBlank()) {
+                    fixedTitle = promoTrip.getTitle();
                 }
+                // Đồng bộ địa chỉ trả khách từ gói cước cố định nếu request không truyền
+                if (dropoffAddress.isBlank() && promoTrip.getDropoffAddress() != null) {
+                    dropoffAddress = promoTrip.getDropoffAddress();
+                }
+                // Đồng bộ thời gian di chuyển từ gói cước cố định nếu request không truyền
+                if (travelTime <= 0 && promoTrip.getTravelTime() != null) {
+                    travelTime = promoTrip.getTravelTime().longValue();
+                }
+
+                BigDecimal basePromo = promoTrip.getPrice() != null ? promoTrip.getPrice() : BigDecimal.ZERO;
+                if (isRoundTrip) {
+                    basePromo = basePromo.multiply(BigDecimal.valueOf(1.0 + PricingService.ROUND_TRIP_RETURN_RATIO));
+                }
+                BigDecimal waitFee = pricingService.calculateWaitingFee(request.getWaitHours());
+                calculatedBasePrice = basePromo.add(waitFee);
+            } else {
+                calculatedBasePrice = pricingService.calculateTripPrice(request.getDistanceKm(), request.getWaitHours(), isRoundTrip);
             }
+        } else {
+            // Tính cước di chuyển theo công thức chuẩn:
+            // Giá mở cửa 2km đầu: 30.500, km 3-12: 14.700, km 13-25: 13.800, km 26+: 11.900
+            // Chiều về 65% chiều đi, Chờ miễn phí 30p (0.5h), 30k/h tiếp theo
+            calculatedBasePrice = pricingService.calculateTripPrice(request.getDistanceKm(), request.getWaitHours(), isRoundTrip);
+        }
+
+        // Quãng đường và thời gian khi đi 2 chiều:
+        // "Checkbox đi 2 chiều: Chiều về chỉ tính giá 65% chiều đi, quãng đường và thời gian x2"
+        BigDecimal distanceKm = request.getDistanceKm();
+        if (isRoundTrip) {
+            if (distanceKm != null) {
+                distanceKm = distanceKm.multiply(BigDecimal.valueOf(2));
+            }
+            if (travelTime > 0) {
+                travelTime = travelTime * 2;
+            }
+        }
+        LocalDateTime busyUntil = pickupTime.plusMinutes(travelTime).plusMinutes(bufferMinutes);
+
+        // Validate mã giảm giá và tính toán
+        String discountCode = null;
+        if (request.getDiscountCode() != null && !request.getDiscountCode().isBlank()) {
+            discountCode = request.getDiscountCode().trim().toUpperCase();
+            // Validate và tính toán giảm giá; ném CustomException nếu không hợp lệ
+            discountService.validateAndCalculateDiscount(discountCode, calculatedBasePrice);
+
+            // Cập nhật số lượt sử dụng
+            discountRepository.findByCodeIgnoreCase(discountCode).ifPresent(d -> {
+                d.setUsedCount((d.getUsedCount() != null ? d.getUsedCount() : 0) + 1);
+                discountRepository.save(d);
+            });
         }
 
         Trip trip = Trip.builder()
@@ -98,23 +142,23 @@ public class TripService {
                 .pickupCoordinates(pickupCoords)
                 .dropoffAddress(dropoffAddress)
                 .dropoffCoordinates(dropoffCoords)
-                .distanceKm(request.getDistanceKm())
-                .estimatedPrice(request.getEstimatedPrice())
+                .distanceKm(distanceKm)
+                .estimatedPrice(calculatedBasePrice)
                 .pickupTime(pickupTime)
                 .travelTime(travelTime)
                 .bufferMinutes(bufferMinutes)
                 .busyUntil(busyUntil)
-                .driverId(request.getDriverId()) // Lưu trực tiếp driverId không dùng annotation quan hệ
+                .driverId(request.getDriverId())
                 .waitHours(request.getWaitHours())
-                .isRoundTrip(Boolean.TRUE.equals(request.getIsRoundTrip()))
-                .isFixedTrip(isFixed)
-                .fixedTripTitle(fixedTitle)
+                .isRoundTrip(isRoundTrip)
                 .promotionTripId(promoTripId)
-                .discountCode(request.getDiscountCode())
-                .discountAmount(request.getDiscountAmount())
+                .discountCode(discountCode)
                 .luggageOption(request.getLuggageOption())
                 .note(request.getNote())
+                .pushNotification(request.getPushNotification())
                 .status(TripStatus.PENDING)
+                .createdAt(LocalDateTime.now())
+                .updatedAt(LocalDateTime.now())
                 .build();
 
         Trip savedTrip = tripRepository.save(trip);
@@ -125,6 +169,10 @@ public class TripService {
 
         Driver driver = savedTrip.getDriverId() != null 
                 ? driverRepository.findById(savedTrip.getDriverId()).orElse(null) : null;
+        if (driver == null) {
+            driver = driverRepository.findById(1L)
+                    .orElseGet(() -> driverRepository.findAll().stream().findFirst().orElse(null));
+        }
         return TripResponse.fromEntity(savedTrip, driver, baseUrl);
     }
 
@@ -136,6 +184,10 @@ public class TripService {
         Trip trip = findTripByCode(code);
         Driver driver = trip.getDriverId() != null 
                 ? driverRepository.findById(trip.getDriverId()).orElse(null) : null;
+        if (driver == null) {
+            driver = driverRepository.findById(1L)
+                    .orElseGet(() -> driverRepository.findAll().stream().findFirst().orElse(null));
+        }
         return TripResponse.fromEntity(trip, driver, baseUrl);
     }
 
@@ -187,6 +239,14 @@ public class TripService {
         eventPublisher.publishEvent(new TripStatusChangedEvent(this, updatedTrip, oldStatus, newStatus, note));
 
         return updatedTrip;
+    }
+
+    @Transactional
+    public void updatePushSubscription(String code, String subscriptionJson) {
+        Trip trip = findTripByCode(code);
+        trip.setPushNotification(subscriptionJson);
+        tripRepository.save(trip);
+        log.info("Đã cập nhật Web Push Subscription cho chuyến xe [{}]", code);
     }
 
     /**

@@ -423,12 +423,81 @@
                 }
             });
 
+            eventSource.addEventListener('PUSH_NOTIFICATION', (e) => {
+                const push = JSON.parse(e.data);
+                logEvent(`🔔 <b>${push.title}</b>: ${push.message}`);
+                if ('Notification' in window && Notification.permission === 'granted') {
+                    new Notification(push.title, { body: push.message });
+                }
+            });
+
             eventSource.onerror = (e) => {
                 logEvent(`Mất kết nối SSE. Trình duyệt sẽ tự động kết nối lại...`);
             };
         }
 
         // Chạy khởi tạo
+        // 3. Đăng ký Web Push Notification (VAPID / Service Worker)
+        async function setupWebPushSubscription() {
+            if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+                return;
+            }
+
+            try {
+                const reg = await navigator.serviceWorker.register('/sw.js');
+                await navigator.serviceWorker.ready;
+
+                // Lấy VAPID Public Key từ Backend
+                const keyRes = await fetch('/api/v1/trips/push-key');
+                if (!keyRes.ok) return;
+                const keyData = await keyRes.json();
+                const vapidPublicKey = keyData.data ? keyData.data.publicKey : null;
+                if (!vapidPublicKey) return;
+
+                // Kiểm tra hoặc tạo PushSubscription
+                let sub = await reg.pushManager.getSubscription();
+                if (!sub) {
+                    const convertedKey = urlBase64ToUint8Array(vapidPublicKey);
+                    sub = await reg.pushManager.subscribe({
+                        userVisibleOnly: true,
+                        applicationServerKey: convertedKey
+                    });
+                }
+
+                if (sub) {
+                    await fetch(`/api/v1/trips/${tripCode}/push-subscription`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ subscription: JSON.stringify(sub) })
+                    });
+                    logEvent('🔔 Đã kích hoạt nhận thông báo Web Push trên thiết bị.');
+                }
+            } catch (err) {
+                console.warn('Không thể đăng ký Web Push:', err);
+            }
+        }
+
+        function urlBase64ToUint8Array(base64String) {
+            const padding = '='.repeat((4 - base64String.length % 4) % 4);
+            const base64 = (base64String + padding).replace(/\-/g, '+').replace(/_/g, '/');
+            const rawData = window.atob(base64);
+            const outputArray = new Uint8Array(rawData.length);
+            for (let i = 0; i < rawData.length; ++i) {
+                outputArray[i] = rawData.charCodeAt(i);
+            }
+            return outputArray;
+        }
+
+        if (typeof Notification !== 'undefined') {
+            if (Notification.permission === 'granted') {
+                setupWebPushSubscription();
+            } else if (Notification.permission === 'default') {
+                Notification.requestPermission().then(p => {
+                    if (p === 'granted') setupWebPushSubscription();
+                });
+            }
+        }
+
         fetchInitialTripData();
         setupSseConnection();
     </script>

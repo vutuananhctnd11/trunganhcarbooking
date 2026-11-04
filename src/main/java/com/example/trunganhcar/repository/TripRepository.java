@@ -50,4 +50,24 @@ public interface TripRepository extends JpaRepository<Trip, Long> {
             @Param("startDateTime") LocalDateTime startDateTime,
             @Param("endDateTime") LocalDateTime endDateTime
     );
+    @Query("""
+        SELECT t FROM Trip t 
+        WHERE t.status = com.example.trunganhcar.enums.TripStatus.CONFIRMED 
+          AND t.pickupTime >= :fromTime 
+          AND t.pickupTime <= :toTime
+    """)
+    List<Trip> findTripsNearPickupTime(
+            @Param("fromTime") LocalDateTime fromTime,
+            @Param("toTime") LocalDateTime toTime
+    );
+
+    @Query("""
+        SELECT t FROM Trip t 
+        WHERE t.status IN (com.example.trunganhcar.enums.TripStatus.ARRIVING, com.example.trunganhcar.enums.TripStatus.IN_TRIP, com.example.trunganhcar.enums.TripStatus.CONFIRMED)
+          AND t.busyUntil IS NOT NULL 
+          AND t.busyUntil <= :now
+    """)
+    List<Trip> findTripsPassedBusyUntil(
+            @Param("now") LocalDateTime now
+    );
 }

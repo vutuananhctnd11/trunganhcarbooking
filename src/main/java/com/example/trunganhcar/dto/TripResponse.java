@@ -17,49 +17,13 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @AllArgsConstructor
 public class TripResponse {
+
     private Long id;
     private String code;
-    private String customerName;
-    private String customerPhone;
+
+    // --- HÀNH TRÌNH ---
     private String pickupAddress;
-    private String pickupCoordinates;
     private String dropoffAddress;
-    private String dropoffCoordinates;
-    private BigDecimal distanceKm;
-    private BigDecimal estimatedPrice;
-
-    @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
-    private LocalDateTime pickupTime;
-
-    // Thời gian di chuyển & bận
-    private Long travelTime;
-    private Long bufferMinutes;
-    @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
-    private LocalDateTime busyUntil;
-
-    // Các thông tin mở rộng của chuyến đi
-    private Double waitHours;
-    private Boolean isRoundTrip;
-    private Boolean isFixedTrip;
-    private String fixedTripTitle;
-    private Long promotionTripId;
-    private String discountCode;
-    private BigDecimal discountAmount;
-    private String luggageOption;
-
-    // Thông tin tài xế (nếu đã nhận chuyến hoặc được gán)
-    private Long driverId;
-    private String driverName;
-    private String driverPhone;
-    private String driverVehicleModel;
-    private Integer driverSeatCount;
-    private String driverLicensePlate;
-    private Double driverRating;
-
-    private String note;
-    private TripStatus status;
-    private String statusDescription;
-    private String trackingUrl;
 
     @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
     private LocalDateTime createdAt;
@@ -67,50 +31,77 @@ public class TripResponse {
     @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
     private LocalDateTime updatedAt;
 
+    @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
+    private LocalDateTime pickupTime;
+
+    private BigDecimal estimatedPrice;
+    private TripStatus status;
+    private String statusDescription;
+
+    // --- TÀI XẾ (Nested object) ---
+    private DriverInfo driver;
+
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class DriverInfo {
+        private String name;
+        private String avatar;
+        private Integer experience;
+        private String vehicleModel;
+        private String vehicleColor;
+        private String licensePlate;
+        private String phone;
+    }
+
     public static TripResponse fromEntity(Trip trip, String baseUrl) {
         return fromEntity(trip, null, baseUrl);
     }
 
     public static TripResponse fromEntity(Trip trip, Driver driver, String baseUrl) {
-        String base = (baseUrl != null && !baseUrl.isBlank()) ? baseUrl : "";
+        String name = (driver != null && driver.getFullName() != null) ? driver.getFullName() : "Trung Anh";
+        String avatar = (driver != null && driver.getAvatarUrl() != null && !driver.getAvatarUrl().isBlank())
+                ? driver.getAvatarUrl()
+                : "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80";
+        Integer exp = (driver != null && driver.getExperienceYears() != null) ? driver.getExperienceYears() : 8;
+        String vModel = (driver != null && driver.getVehicleModel() != null && !driver.getVehicleModel().isBlank())
+                ? driver.getVehicleModel()
+                : "VinFast VF e34 (Limo Green Edition)";
+        String vColor = (driver != null && driver.getVehicleColor() != null && !driver.getVehicleColor().isBlank())
+                ? driver.getVehicleColor()
+                : "Đỏ Crimson (Đỏ đô ánh kim)";
+        String plate = (driver != null && driver.getLicensePlate() != null && !driver.getLicensePlate().isBlank())
+                ? driver.getLicensePlate()
+                : "35H - 182.29";
+        String phone = (driver != null && driver.getPhone() != null && !driver.getPhone().isBlank())
+                ? driver.getPhone()
+                : "0362882882";
+
+        DriverInfo driverInfo = DriverInfo.builder()
+                .name(name)
+                .avatar(avatar)
+                .experience(exp)
+                .vehicleModel(vModel)
+                .vehicleColor(vColor)
+                .licensePlate(plate)
+                .phone(phone)
+                .build();
 
         return TripResponse.builder()
                 .id(trip.getId())
                 .code(trip.getCode())
-                .customerName(trip.getCustomerName())
-                .customerPhone(trip.getCustomerPhone())
+                // Hành trình
                 .pickupAddress(trip.getPickupAddress())
-                .pickupCoordinates(trip.getPickupCoordinates())
                 .dropoffAddress(trip.getDropoffAddress())
-                .dropoffCoordinates(trip.getDropoffCoordinates())
-                .distanceKm(trip.getDistanceKm())
-                .estimatedPrice(trip.getEstimatedPrice())
-                .pickupTime(trip.getPickupTime())
-                .travelTime(trip.getTravelTime())
-                .bufferMinutes(trip.getBufferMinutes())
-                .busyUntil(trip.getBusyUntil())
-                .waitHours(trip.getWaitHours())
-                .isRoundTrip(trip.getIsRoundTrip())
-                .isFixedTrip(trip.getIsFixedTrip())
-                .fixedTripTitle(trip.getFixedTripTitle())
-                .promotionTripId(trip.getPromotionTripId())
-                .discountCode(trip.getDiscountCode())
-                .discountAmount(trip.getDiscountAmount())
-                .luggageOption(trip.getLuggageOption())
-                // Thông tin tài xế (lấy từ entity Driver hoặc driverId của Trip)
-                .driverId(driver != null ? driver.getId() : trip.getDriverId())
-                .driverName(driver != null ? driver.getFullName() : null)
-                .driverPhone(driver != null ? driver.getPhone() : null)
-                .driverVehicleModel(driver != null ? driver.getVehicleModel() : null)
-                .driverSeatCount(driver != null ? driver.getSeatCount() : null)
-                .driverLicensePlate(driver != null ? driver.getLicensePlate() : null)
-                .driverRating(driver != null ? driver.getRating() : null)
-                .note(trip.getNote())
-                .status(trip.getStatus())
-                .statusDescription(trip.getStatus().getDescription())
-                .trackingUrl(base + "/trip/" + trip.getCode())
                 .createdAt(trip.getCreatedAt())
                 .updatedAt(trip.getUpdatedAt())
+                .pickupTime(trip.getPickupTime())
+                .estimatedPrice(trip.getEstimatedPrice())
+                .status(trip.getStatus())
+                .statusDescription(trip.getStatus() != null ? trip.getStatus().getDescription() : "")
+                // Tài xế (nested object)
+                .driver(driverInfo)
                 .build();
     }
 }

@@ -24,7 +24,9 @@ public class DriverRegisterRequest {
     @Schema(description = "Dòng xe VinFast", example = "VinFast Limo Green (VF 8)", requiredMode = Schema.RequiredMode.REQUIRED)
     private String vehicleModel;
 
+    @Schema(description = "Màu sơn xe", example = "🔴 Đỏ Crimson (Đỏ đô ánh kim)")
+    private String vehicleColor;
+
     @Schema(description = "Mật khẩu đăng nhập tài xế tự nhập", example = "123456", requiredMode = Schema.RequiredMode.REQUIRED)
     private String password;
 }
-

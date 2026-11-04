@@ -28,6 +28,8 @@ public class TelegramProperties {
     /**
      * URL public của backend server (dùng cho webhook, redirect gọi điện thoại)
      */
-    private String appBaseUrl = "http://localhost:8080";
+    private String appBaseUrl;
+
+    private String feBaseUrl;
 }
 
