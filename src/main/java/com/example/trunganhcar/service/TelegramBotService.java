@@ -22,6 +22,7 @@ import java.nio.charset.StandardCharsets;
 import java.text.NumberFormat;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
 
@@ -185,7 +186,15 @@ public class TelegramBotService {
      */
     private void editTelegramMessageAfterAction(Long chatId, Integer messageId, Trip trip, String statusHeader) {
         String updatedText = buildNewTripNotificationText(trip);
-        InlineKeyboardMarkup markup = buildInlineKeyboardForStatus(trip);
+        InlineKeyboardMarkup markup;
+        if (trip.getStatus() == TripStatus.COMPLETED || trip.getStatus() == TripStatus.CANCELLED) {
+            markup = InlineKeyboardMarkup.builder().inlineKeyboard(Collections.emptyList()).build();
+        } else if (trip.getStatus() == TripStatus.CONFIRMED) {
+            Driver driver = trip.getDriverId() != null ? driverRepository.findById(trip.getDriverId()).orElse(null) : null;
+            markup = buildAcceptedInlineKeyboard(trip, driver != null ? driver.getFullName() : "Trung Anh");
+        } else {
+            markup = buildInlineKeyboardForStatus(trip);
+        }
 
         EditMessageTextRequest request = EditMessageTextRequest.builder()
                 .chatId(chatId.toString())
@@ -263,6 +272,13 @@ public class TelegramBotService {
      * Trạng thái: ⌛ Đang chờ xác nhận...
      */
     public String buildNewTripNotificationText(Trip trip) {
+        if (trip.getStatus() == TripStatus.CONFIRMED) {
+            return buildAcceptedTripShortText(trip);
+        }
+        if (trip.getStatus() == TripStatus.COMPLETED) {
+            return buildCompletedTripText(trip);
+        }
+
         String pickupTimeStr = trip.getPickupTime() != null 
                 ? trip.getPickupTime().format(DATE_TIME_FORMATTER) 
                 : "Ngay bây giờ";
@@ -558,7 +574,7 @@ public class TelegramBotService {
                 driver.getLicensePlate() != null ? driver.getLicensePlate() : "") : "Đã tiếp nhận";
 
         return String.format("""
-                ✅ <b>TÀI XẾ ĐÃ NHẬN CHUYẾN!</b> • #%s
+                ✅ <b>BẠN ĐÃ XÁC NHẬN CHO CHUYẾN ĐI</b> • #%s
                 ───────────────────────
                 ⏰ <b>Giờ đón:</b> %s
                 📍 <b>Điểm đón:</b> %s
@@ -568,6 +584,40 @@ public class TelegramBotService {
                 💰 <b>Giá cước:</b> %s
                 ───────────────────────
                 🌐 <i>Đã gửi thông báo Web Push & link tra cứu đến khách hàng!</i>""",
+                trip.getCode(),
+                pickupTimeStr,
+                escapeHtml(trip.getPickupAddress()),
+                escapeHtml(trip.getDropoffAddress()),
+                escapeHtml(trip.getCustomerName()),
+                trip.getCustomerPhone(),
+                escapeHtml(vehicleInfo),
+                priceStr
+        );
+    }
+
+    /**
+     * Template thông báo khi chuyến xe đã hoàn thành:
+     * 🏁 ĐÃ HOÀN THÀNH chuyến đi • #{code}
+     */
+    public String buildCompletedTripText(Trip trip) {
+        String pickupTimeStr = trip.getPickupTime() != null ? trip.getPickupTime().format(DATE_TIME_FORMATTER) : "Đã hoàn tất";
+        String priceStr = trip.getEstimatedPrice() != null ? CURRENCY_FORMATTER.format(trip.getEstimatedPrice()) + " VNĐ" : "Thỏa thuận";
+        Driver driver = trip.getDriverId() != null ? driverRepository.findById(trip.getDriverId()).orElse(null) : null;
+        String vehicleInfo = driver != null ? String.format("%s (%s)",
+                driver.getVehicleModel() != null ? driver.getVehicleModel() : "VinFast",
+                driver.getLicensePlate() != null ? driver.getLicensePlate() : "") : "VinFast";
+
+        return String.format("""
+                🏁 <b>ĐÃ HOÀN THÀNH chuyến đi</b> • #%s
+                ───────────────────────
+                ⏰ <b>Giờ đón:</b> %s
+                📍 <b>Điểm đón:</b> %s
+                🏁 <b>Điểm đến:</b> %s
+                👤 <b>Khách hàng:</b> %s - <code>%s</code>
+                🚗 <b>Xe:</b> %s
+                💰 <b>Thực thu:</b> %s
+                ───────────────────────
+                Trạng thái: 🏁 <i>Chuyến đi kết thúc an toàn. Cảm ơn tài xế!</i>""",
                 trip.getCode(),
                 pickupTimeStr,
                 escapeHtml(trip.getPickupAddress()),
@@ -716,37 +766,20 @@ public class TelegramBotService {
     }
 
     /**
-     * Bàn phím nút bấm khi hết giờ chuyến
+     * Bàn phím nút bấm khi hết giờ chuyến: Không cần nút bấm
      */
     public InlineKeyboardMarkup buildTripFinishedInlineKeyboard(Trip trip) {
-        List<List<InlineKeyboardButton>> rows = new ArrayList<>();
-
-        // Hàng 1: [Hoàn thành chuyến]
-        rows.add(List.of(
-                InlineKeyboardButton.builder()
-                        .text("🏁 Hoàn thành chuyến")
-                        .callbackData("DONE_" + trip.getCode())
-                        .build()
-        ));
-
-        // Hàng 2: [Gửi thông báo Web Push đến KH]
-        rows.add(List.of(
-                InlineKeyboardButton.builder()
-                        .text("🔔 Gửi thông báo Web Push đến KH")
-                        .callbackData("PUSH_COMPLETE_" + trip.getCode())
-                        .build()
-        ));
-
-        return InlineKeyboardMarkup.builder().inlineKeyboard(rows).build();
+        return InlineKeyboardMarkup.builder().inlineKeyboard(Collections.emptyList()).build();
     }
 
     /**
-     * Gửi tin nhắn nhắc hoàn thành chuyến tới Telegram tài xế
+     * Gửi tin nhắn thông báo hoàn thành chuyến tới Telegram tài xế và tự động gửi Web Push cho khách hàng
      */
     public void sendTripFinishedReminder(Trip trip) {
-        String text = buildTripFinishedReminderText(trip);
-        InlineKeyboardMarkup markup = buildTripFinishedInlineKeyboard(trip);
+        String text = buildCompletedTripText(trip);
+        InlineKeyboardMarkup markup = InlineKeyboardMarkup.builder().inlineKeyboard(Collections.emptyList()).build();
         sendMessage(properties.getDriverChatId(), text, markup);
+        sendWebPushToCustomer(trip, "Chuyến đi đã hoàn thành!", "Cảm ơn quý khách đã hoàn thành chuyến đi #" + trip.getCode() + " cùng Trung Anh Car. Chúc quý khách một ngày tốt lành!");
     }
 
     /**

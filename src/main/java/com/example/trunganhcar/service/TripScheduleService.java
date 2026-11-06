@@ -1,6 +1,7 @@
 package com.example.trunganhcar.service;
 
 import com.example.trunganhcar.entity.Trip;
+import com.example.trunganhcar.enums.TripStatus;
 import com.example.trunganhcar.repository.TripRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -15,7 +16,7 @@ import java.util.concurrent.ConcurrentHashMap;
 /**
  * Service chạy định kỳ quản lý lịch trình và gửi thông báo nhắc nhở tự động qua Telegram:
  * 1. Nhắc trước giờ đón 1 tiếng (yêu cầu tài xế chuẩn bị và xuất phát đến điểm đón)
- * 2. Nhắc nhở khi hết giờ chuyến đi (hết busyUntil, nhắc tài xế bấm hoàn thành và gửi Web Push cho khách)
+ * 2. Khi hết giờ chuyến đi (hết busyUntil, tự động hoàn thành chuyến và gửi Web Push cho khách)
  */
 @Service
 @RequiredArgsConstructor
@@ -24,6 +25,7 @@ public class TripScheduleService {
 
     private final TripRepository tripRepository;
     private final TelegramBotService telegramBotService;
+    private final TripService tripService;
 
     // Bộ nhớ cache lưu các mã chuyến đã gửi thông báo để tránh gửi lặp
     private final Set<String> reminded1hTripCodes = ConcurrentHashMap.newKeySet();
@@ -59,10 +61,14 @@ public class TripScheduleService {
             if (!finishedNotifiedTripCodes.contains(trip.getCode())) {
                 log.info("Phát hiện chuyến đi đã hết thời gian dự kiến: mã={}, busyUntil={}", trip.getCode(), trip.getBusyUntil());
                 try {
-                    telegramBotService.sendTripFinishedReminder(trip);
+                    Trip completedTrip = trip;
+                    if (trip.getStatus() != TripStatus.COMPLETED) {
+                        completedTrip = tripService.updateTripStatus(trip.getCode(), TripStatus.COMPLETED, "Cuốc xe đã kết thúc theo lịch trình");
+                    }
+                    telegramBotService.sendTripFinishedReminder(completedTrip);
                     finishedNotifiedTripCodes.add(trip.getCode());
                 } catch (Exception e) {
-                    log.error("Lỗi khi gửi thông báo nhắc hoàn thành chuyến cho chuyến {}: {}", trip.getCode(), e.getMessage());
+                    log.error("Lỗi khi tự động hoàn thành chuyến đi {}: {}", trip.getCode(), e.getMessage());
                 }
             }
         }
