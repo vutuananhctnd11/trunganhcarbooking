@@ -10,7 +10,7 @@
 		<relativePath /> <!-- lookup parent from repository -->
 	</parent>
 	<groupId>com.example</groupId>
-	<artifactId>trunganhcar</artifactId>
+	<artifactId>trunganhcarbe</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
 	<name />
 	<description />
@@ -124,6 +124,7 @@
 	</dependencies>
 
 	<build>
+		<finalName>trunganhcarbe</finalName>
 		<plugins>
 			<!-- Spring Boot -->
 			<plugin>
