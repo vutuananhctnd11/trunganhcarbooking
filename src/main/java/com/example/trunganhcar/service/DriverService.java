@@ -39,7 +39,7 @@ public class DriverService {
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd");
 
     /**
-     * Tạo mới thông tin tài xế
+     * Tạo mới thông tin tài xế (quản trị viên tạo trực tiếp, mặc định phê duyệt)
      */
     @Transactional
     public DriverResponse createDriver(DriverRequest request) {
@@ -68,6 +68,8 @@ public class DriverService {
                 .telegramChatId(request.getTelegramChatId())
                 .avatarUrl(request.getAvatarUrl() != null ? request.getAvatarUrl().trim() : null)
                 .rating(request.getRating() != null ? request.getRating() : 5.0)
+                .approvalStatus("APPROVED")
+                .approvedAt(LocalDateTime.now())
                 .isActive(request.getIsActive() != null ? request.getIsActive() : true)
                 .build();
 
@@ -76,15 +78,50 @@ public class DriverService {
     }
 
     /**
-     * Lấy danh sách tất cả tài xế (có thể lọc theo trạng thái hoạt động)
+     * Phê duyệt tài xế bởi Admin
+     */
+    @Transactional
+    public DriverResponse approveDriver(Long id) {
+        log.info("Admin phê duyệt tài xế ID: {}", id);
+        Driver driver = findDriverById(id);
+        driver.setApprovalStatus("APPROVED");
+        driver.setIsActive(true);
+        driver.setApprovedAt(LocalDateTime.now());
+        driver.setRejectionReason(null);
+        Driver saved = driverRepository.save(driver);
+        return DriverResponse.fromEntity(saved);
+    }
+
+    /**
+     * Từ chối phê duyệt tài xế bởi Admin kèm lý do
+     */
+    @Transactional
+    public DriverResponse rejectDriver(Long id, String reason) {
+        log.info("Admin từ chối tài xế ID: {}, lý do: {}", id, reason);
+        Driver driver = findDriverById(id);
+        driver.setApprovalStatus("REJECTED");
+        driver.setIsActive(false);
+        driver.setRejectionReason(reason != null && !reason.isBlank() ? reason.trim() : "Thông tin chưa đạt yêu cầu");
+        Driver saved = driverRepository.save(driver);
+        return DriverResponse.fromEntity(saved);
+    }
+
+    /**
+     * Lấy danh sách tất cả tài xế (có thể lọc theo trạng thái hoạt động và trạng thái duyệt)
      */
     @Transactional(readOnly = true)
-    public List<DriverResponse> getAllDrivers(Boolean isActive) {
+    public List<DriverResponse> getAllDrivers(Boolean isActive, String approvalStatus) {
         List<Driver> drivers = driverRepository.findAll();
         return drivers.stream()
                 .filter(d -> isActive == null || d.getIsActive().equals(isActive))
+                .filter(d -> approvalStatus == null || approvalStatus.isBlank() || approvalStatus.equalsIgnoreCase(d.getApprovalStatus()))
                 .map(DriverResponse::fromEntity)
                 .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public List<DriverResponse> getAllDrivers(Boolean isActive) {
+        return getAllDrivers(isActive, null);
     }
 
     /**
@@ -115,7 +152,6 @@ public class DriverService {
 
         if (request.getLicensePlate() != null && !request.getLicensePlate().isBlank() && !request.getLicensePlate().equalsIgnoreCase(driver.getLicensePlate())) {
             String formattedPlate = com.example.trunganhcar.util.LicensePlateUtils.formatLicensePlate(request.getLicensePlate());
-            request.setLicensePlate(formattedPlate);
             driverRepository.findByLicensePlate(formattedPlate).ifPresent(existing -> {
                 if (!existing.getId().equals(id)) {
                     throw new CustomException(ErrorCode.LICENSE_PLATE_ALREADY_EXISTS, "Biển số xe mới đã tồn tại trên hệ thống!");

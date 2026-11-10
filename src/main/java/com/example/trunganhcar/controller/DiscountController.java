@@ -14,6 +14,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 @Tag(name = "8. Discount / Voucher APIs", description = "Các API Quản lý và Áp dụng mã giảm giá / Voucher")
 @RestController
 @RequestMapping("/api/v1/discounts")
@@ -28,6 +30,13 @@ public class DiscountController {
         DiscountResponse response = discountService.createDiscount(request);
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.created("Tạo mới mã giảm giá thành công", response));
+    }
+
+    @Operation(summary = "Lấy danh sách mã giảm giá đang hoạt động (cho khách đặt xe)", description = "Xem các voucher đang có hiệu lực để khách hàng bấm áp dụng trực tiếp")
+    @GetMapping("/active")
+    public ResponseEntity<ApiResponse<List<DiscountResponse>>> getActiveDiscounts() {
+        List<DiscountResponse> response = discountService.getActiveDiscounts();
+        return ResponseEntity.ok(ApiResponse.success(response));
     }
 
     @Operation(summary = "Lấy danh sách mã giảm giá (Phân trang)", description = "Xem danh sách mã giảm giá trong hệ thống, hỗ trợ lọc theo trạng thái hoạt động")
@@ -78,4 +87,3 @@ public class DiscountController {
         return ResponseEntity.ok(ApiResponse.success("Xóa mã giảm giá thành công", null));
     }
 }
-

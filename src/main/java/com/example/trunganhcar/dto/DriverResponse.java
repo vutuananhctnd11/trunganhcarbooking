@@ -26,6 +26,12 @@ public class DriverResponse {
     private String telegramChatId;
     private String avatarUrl;
     private Double rating;
+    private String approvalStatus;
+    private String rejectionReason;
+
+    @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
+    private LocalDateTime approvedAt;
+
     private Boolean isActive;
 
     @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
@@ -48,6 +54,9 @@ public class DriverResponse {
                 .telegramChatId(driver.getTelegramChatId())
                 .avatarUrl(driver.getAvatarUrl())
                 .rating(driver.getRating())
+                .approvalStatus(driver.getApprovalStatus())
+                .rejectionReason(driver.getRejectionReason())
+                .approvedAt(driver.getApprovedAt())
                 .isActive(driver.getIsActive())
                 .createdAt(driver.getCreatedAt())
                 .updatedAt(driver.getUpdatedAt())

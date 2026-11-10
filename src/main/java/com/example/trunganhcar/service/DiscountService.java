@@ -17,6 +17,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -30,6 +31,10 @@ public class DiscountService {
      */
     @Transactional
     public DiscountResponse createDiscount(DiscountRequest request) {
+        if (request.getCode() == null || request.getCode().isBlank()) {
+            throw new CustomException("Mã giảm giá không được để trống!");
+        }
+
         String cleanCode = request.getCode().trim().toUpperCase();
         log.info("Tạo mã giảm giá mới: {}", cleanCode);
 
@@ -43,7 +48,7 @@ public class DiscountService {
 
         Discount discount = Discount.builder()
                 .code(cleanCode)
-                .title(request.getTitle().trim())
+                .title(request.getTitle() != null ? request.getTitle().trim() : cleanCode)
                 .description(request.getDescription())
                 .discountType(request.getDiscountType() != null && !request.getDiscountType().isBlank() 
                         ? request.getDiscountType().trim().toUpperCase() : "FIXED_AMOUNT")
@@ -59,6 +64,21 @@ public class DiscountService {
 
         Discount saved = discountRepository.save(discount);
         return DiscountResponse.fromEntity(saved);
+    }
+
+    /**
+     * Lấy danh sách các mã giảm giá đang hoạt động và còn hạn (dành cho khách chọn trên web)
+     */
+    @Transactional(readOnly = true)
+    public List<DiscountResponse> getActiveDiscounts() {
+        LocalDateTime now = LocalDateTime.now();
+        List<Discount> activeDiscounts = discountRepository.findByIsActiveTrue();
+        return activeDiscounts.stream()
+                .filter(d -> (d.getStartAt() == null || !now.isBefore(d.getStartAt())))
+                .filter(d -> (d.getEndAt() == null || !now.isAfter(d.getEndAt())))
+                .filter(d -> (d.getUsageLimit() == null || (d.getUsedCount() != null ? d.getUsedCount() : 0) < d.getUsageLimit()))
+                .map(DiscountResponse::fromEntity)
+                .toList();
     }
 
     /**
@@ -124,13 +144,15 @@ public class DiscountService {
             throw new CustomException(ErrorCode.DISCOUNT_EXPIRED, "Mã giảm giá '" + cleanCode + "' đã hết hạn sử dụng!");
         }
 
-        if (discount.getUsageLimit() != null && discount.getUsedCount() >= discount.getUsageLimit()) {
+        int currentUsed = discount.getUsedCount() != null ? discount.getUsedCount() : 0;
+        if (discount.getUsageLimit() != null && currentUsed >= discount.getUsageLimit()) {
             throw new CustomException(ErrorCode.DISCOUNT_USAGE_EXCEEDED, "Mã giảm giá '" + cleanCode + "' đã hết lượt sử dụng!");
         }
 
-        if (discount.getMinTripPrice() != null && tripPrice.compareTo(discount.getMinTripPrice()) < 0) {
+        BigDecimal minPrice = discount.getMinTripPrice() != null ? discount.getMinTripPrice() : BigDecimal.ZERO;
+        if (tripPrice.compareTo(minPrice) < 0) {
             throw new CustomException(ErrorCode.DISCOUNT_MIN_PRICE_NOT_MET, 
-                    String.format("Giá trị chuyến đi tối thiểu để áp dụng mã này là %s đ!", discount.getMinTripPrice().toPlainString()));
+                    String.format("Giá trị chuyến đi tối thiểu để áp dụng mã này là %s đ!", minPrice.toPlainString()));
         }
 
         // Tính toán số tiền được giảm
@@ -145,7 +167,7 @@ public class DiscountService {
             }
         } else {
             // Giảm theo số tiền cố định
-            discountAmount = discount.getDiscountValue();
+            discountAmount = discount.getDiscountValue() != null ? discount.getDiscountValue() : BigDecimal.ZERO;
         }
 
         // Số tiền giảm không được vượt quá giá trị chuyến xe
@@ -161,6 +183,7 @@ public class DiscountService {
                 .originalPrice(tripPrice)
                 .discountAmount(discountAmount)
                 .finalPrice(finalPrice)
+                .discount(DiscountResponse.fromEntity(discount))
                 .build();
     }
 
@@ -235,4 +258,3 @@ public class DiscountService {
                 .orElseThrow(() -> new CustomException(ErrorCode.DISCOUNT_NOT_FOUND, "Không tìm thấy mã giảm giá với mã: " + code));
     }
 }
-

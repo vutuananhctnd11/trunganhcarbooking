@@ -18,5 +18,5 @@ public class DiscountValidateResponse {
     private BigDecimal originalPrice;
     private BigDecimal discountAmount;
     private BigDecimal finalPrice;
+    private DiscountResponse discount;
 }
-

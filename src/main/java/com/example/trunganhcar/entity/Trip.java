@@ -3,8 +3,6 @@ package com.example.trunganhcar.entity;
 import com.example.trunganhcar.enums.TripStatus;
 import jakarta.persistence.*;
 import lombok.*;
-import org.hibernate.annotations.CreationTimestamp;
-import org.hibernate.annotations.UpdateTimestamp;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.LastModifiedDate;
 
@@ -15,7 +13,8 @@ import java.time.LocalDateTime;
 @Table(name = "trips", indexes = {
         @Index(name = "idx_trip_code", columnList = "code", unique = true),
         @Index(name = "idx_trip_status", columnList = "status"),
-        @Index(name = "idx_trip_driver_id", columnList = "driver_id")
+        @Index(name = "idx_trip_driver_id", columnList = "driver_id"),
+        @Index(name = "idx_trip_customer_phone", columnList = "customer_phone")
 })
 @Getter
 @Setter
@@ -74,21 +73,24 @@ public class Trip {
     @Column(name = "discount_code", length = 50)
     private String discountCode;
 
+    @Column(name = "discount_amount", precision = 12, scale = 2)
+    private BigDecimal discountAmount;
+
     @Column(name = "luggage_option", length = 100)
     private String luggageOption;
 
     @Column(columnDefinition = "TEXT")
     private String note;
 
-    //notethời gian di chuyển trong chuyến
+    // thời gian di chuyển trong chuyến
     @Column(name = "travel_time")
     private Long travelTime;
 
-    //thời gian chờ giữa các chuyến
+    // thời gian chờ giữa các chuyến
     @Column(name = "buffer_minutes", nullable = false, columnDefinition = "integer default 30")
     private Long bufferMinutes;
 
-    //thời gian bận trong chuyến
+    // thời gian bận trong chuyến
     @Column(name = "busy_until")
     private LocalDateTime busyUntil;
 

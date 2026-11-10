@@ -21,9 +21,17 @@ public class TripResponse {
     private Long id;
     private String code;
 
+    // --- THÔNG TIN KHÁCH HÀNG ---
+    private String customerName;
+    private String customerPhone;
+    private String note;
+
     // --- HÀNH TRÌNH ---
     private String pickupAddress;
     private String dropoffAddress;
+    private BigDecimal distanceKm;
+    private Boolean isRoundTrip;
+    private Double waitHours;
 
     @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
     private LocalDateTime createdAt;
@@ -34,7 +42,13 @@ public class TripResponse {
     @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
     private LocalDateTime pickupTime;
 
+    @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
+    private LocalDateTime busyUntil;
+
     private BigDecimal estimatedPrice;
+    private String discountCode;
+    private BigDecimal discountAmount;
+
     private TripStatus status;
     private String statusDescription;
 
@@ -91,13 +105,23 @@ public class TripResponse {
         return TripResponse.builder()
                 .id(trip.getId())
                 .code(trip.getCode())
+                // Thông tin khách hàng
+                .customerName(trip.getCustomerName())
+                .customerPhone(trip.getCustomerPhone())
+                .note(trip.getNote())
                 // Hành trình
                 .pickupAddress(trip.getPickupAddress())
                 .dropoffAddress(trip.getDropoffAddress())
+                .distanceKm(trip.getDistanceKm())
+                .isRoundTrip(trip.getIsRoundTrip())
+                .waitHours(trip.getWaitHours())
                 .createdAt(trip.getCreatedAt())
                 .updatedAt(trip.getUpdatedAt())
                 .pickupTime(trip.getPickupTime())
+                .busyUntil(trip.getBusyUntil())
                 .estimatedPrice(trip.getEstimatedPrice())
+                .discountCode(trip.getDiscountCode())
+                .discountAmount(trip.getDiscountAmount())
                 .status(trip.getStatus())
                 .statusDescription(trip.getStatus() != null ? trip.getStatus().getDescription() : "")
                 // Tài xế (nested object)

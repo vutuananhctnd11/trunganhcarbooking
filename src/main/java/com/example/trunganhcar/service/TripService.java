@@ -1,6 +1,10 @@
 package com.example.trunganhcar.service;
 
 import com.example.trunganhcar.dto.BookingRequest;
+import com.example.trunganhcar.dto.ConflictingTripDto;
+import com.example.trunganhcar.dto.DiscountValidateResponse;
+import com.example.trunganhcar.dto.TripAvailabilityRequest;
+import com.example.trunganhcar.dto.TripAvailabilityResponse;
 import com.example.trunganhcar.dto.TripResponse;
 import com.example.trunganhcar.entity.Driver;
 import com.example.trunganhcar.entity.PromotionTrip;
@@ -23,6 +27,9 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.Collections;
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -36,6 +43,8 @@ public class TripService {
     private final PricingService pricingService;
     private final DiscountService discountService;
     private final DiscountRepository discountRepository;
+
+    private static final DateTimeFormatter TIME_FORMATTER = DateTimeFormatter.ofPattern("HH:mm dd/MM/yyyy");
 
     /**
      * Tạo chuyến đi mới cho khách hàng
@@ -69,7 +78,6 @@ public class TripService {
         // Xử lý gói cước chuyến cố định theo chương trình quảng cáo
         boolean isFixed = Boolean.TRUE.equals(request.getIsFixedTrip()) || request.getPromotionTripId() != null;
         Long promoTripId = null;
-        String fixedTitle = null;
         String dropoffAddress = request.getDropoffAddress() != null ? request.getDropoffAddress().trim() : "";
         boolean isRoundTrip = Boolean.TRUE.equals(request.getIsRoundTrip());
 
@@ -78,15 +86,11 @@ public class TripService {
         if (isFixed && request.getPromotionTripId() != null) {
             promoTripId = request.getPromotionTripId();
             PromotionTrip promoTrip = promotionTripRepository.findById(promoTripId).orElse(null);
+
             if (promoTrip != null) {
-                if (fixedTitle == null || fixedTitle.isBlank()) {
-                    fixedTitle = promoTrip.getTitle();
-                }
-                // Đồng bộ địa chỉ trả khách từ gói cước cố định nếu request không truyền
                 if (dropoffAddress.isBlank() && promoTrip.getDropoffAddress() != null) {
                     dropoffAddress = promoTrip.getDropoffAddress();
                 }
-                // Đồng bộ thời gian di chuyển từ gói cước cố định nếu request không truyền
                 if (travelTime <= 0 && promoTrip.getTravelTime() != null) {
                     travelTime = promoTrip.getTravelTime().longValue();
                 }
@@ -110,22 +114,43 @@ public class TripService {
         // Quãng đường và thời gian khi đi 2 chiều:
         // "Checkbox đi 2 chiều: Chiều về chỉ tính giá 65% chiều đi, quãng đường và thời gian x2"
         BigDecimal distanceKm = request.getDistanceKm();
+        long totalTravelMinutes = travelTime;
         if (isRoundTrip) {
             if (distanceKm != null) {
                 distanceKm = distanceKm.multiply(BigDecimal.valueOf(2));
             }
-            if (travelTime > 0) {
-                travelTime = travelTime * 2;
+            if (totalTravelMinutes > 0) {
+                totalTravelMinutes = totalTravelMinutes * 2;
             }
         }
-        LocalDateTime busyUntil = pickupTime.plusMinutes(travelTime).plusMinutes(bufferMinutes);
+        if (request.getWaitHours() != null && request.getWaitHours() > 0) {
+            totalTravelMinutes += Math.round(request.getWaitHours() * 60);
+        }
+        LocalDateTime busyUntil = pickupTime.plusMinutes(totalTravelMinutes).plusMinutes(bufferMinutes);
 
-        // Validate mã giảm giá và tính toán
+        // Kiểm tra xung đột lịch trình tài xế nếu có chỉ định driverId
+        if (request.getDriverId() != null) {
+            List<Trip> conflicts = tripRepository.findConflictingTrips(request.getDriverId(), pickupTime, busyUntil);
+            if (!conflicts.isEmpty()) {
+                Trip conflictTrip = conflicts.get(0);
+                throw new CustomException(
+                        ErrorCode.INVALID_TRIP_STATUS,
+                        String.format("Tài xế đã có chuyến xe [%s] bận từ %s đến %s. Vui lòng chọn khung giờ khác!",
+                                conflictTrip.getCode(),
+                                conflictTrip.getPickupTime().format(TIME_FORMATTER),
+                                conflictTrip.getBusyUntil().format(TIME_FORMATTER))
+                );
+            }
+        }
+
+        // Validate mã giảm giá và tính toán số tiền giảm
         String discountCode = null;
+        BigDecimal discountAmount = BigDecimal.ZERO;
         if (request.getDiscountCode() != null && !request.getDiscountCode().isBlank()) {
             discountCode = request.getDiscountCode().trim().toUpperCase();
-            // Validate và tính toán giảm giá; ném CustomException nếu không hợp lệ
-            discountService.validateAndCalculateDiscount(discountCode, calculatedBasePrice);
+            DiscountValidateResponse discountRes = discountService.validateAndCalculateDiscount(discountCode, calculatedBasePrice);
+            discountAmount = discountRes.getDiscountAmount();
+            calculatedBasePrice = discountRes.getFinalPrice();
 
             // Cập nhật số lượt sử dụng
             discountRepository.findByCodeIgnoreCase(discountCode).ifPresent(d -> {
@@ -144,8 +169,9 @@ public class TripService {
                 .dropoffCoordinates(dropoffCoords)
                 .distanceKm(distanceKm)
                 .estimatedPrice(calculatedBasePrice)
+                .discountAmount(discountAmount)
                 .pickupTime(pickupTime)
-                .travelTime(travelTime)
+                .travelTime(totalTravelMinutes)
                 .bufferMinutes(bufferMinutes)
                 .busyUntil(busyUntil)
                 .driverId(request.getDriverId())
@@ -174,6 +200,108 @@ public class TripService {
                     .orElseGet(() -> driverRepository.findAll().stream().findFirst().orElse(null));
         }
         return TripResponse.fromEntity(savedTrip, driver, baseUrl);
+    }
+
+    /**
+     * Kiểm tra xem chuyến đi sắp đặt có bị xung đột thời gian với lịch trình của tài xế không.
+     * busy_until của chuyến phải trước chuyến liền kề tiếp theo, và pickup_time phải sau chuyến liền kề trước đó.
+     */
+    @Transactional(readOnly = true)
+    public TripAvailabilityResponse checkTripAvailability(TripAvailabilityRequest request) {
+        LocalDateTime pickupTime = request.getPickupTime();
+        if (pickupTime == null) {
+            throw new CustomException(ErrorCode.BAD_REQUEST, "Thời gian đón không được để trống");
+        }
+
+        // Tính travelTime nếu chưa có
+        Long travelTime = request.getTravelTime();
+        if (travelTime == null || travelTime <= 0) {
+            if (request.getDistanceKm() != null && request.getDistanceKm().compareTo(BigDecimal.ZERO) > 0) {
+                // Ước tính thời gian chạy xe: ~35km/h, tối thiểu 15 phút
+                travelTime = Math.max(15L, Math.round(request.getDistanceKm().doubleValue() * 1.8));
+            } else {
+                travelTime = 30L; // Mặc định 30 phút
+            }
+        }
+
+        // Nếu khứ hồi, nhân đôi travelTime
+        if (Boolean.TRUE.equals(request.getIsRoundTrip())) {
+            travelTime = travelTime * 2;
+        }
+
+        // Cộng thời gian chờ nếu có
+        if (request.getWaitHours() != null && request.getWaitHours() > 0) {
+            travelTime += Math.round(request.getWaitHours() * 60);
+        }
+
+        int bufferMinutes = request.getBufferMinutes() != null ? request.getBufferMinutes() : 30;
+        LocalDateTime busyUntil = pickupTime.plusMinutes(travelTime).plusMinutes(bufferMinutes);
+
+        Long driverId = request.getDriverId();
+        List<Trip> conflicts = tripRepository.findConflictingTrips(driverId, pickupTime, busyUntil);
+
+        if (conflicts.isEmpty()) {
+            return TripAvailabilityResponse.builder()
+                    .available(true)
+                    .message("Khung giờ khả dụng, tài xế có thể nhận chuyến!")
+                    .pickupTime(pickupTime)
+                    .busyUntil(busyUntil)
+                    .driverId(driverId)
+                    .conflicts(Collections.emptyList())
+                    .build();
+        } else {
+            List<ConflictingTripDto> conflictDtos = conflicts.stream()
+                    .map(ConflictingTripDto::fromEntity)
+                    .toList();
+
+            return TripAvailabilityResponse.builder()
+                    .available(false)
+                    .message(String.format("Khung giờ bị trùng với %d chuyến xe đã nhận của tài xế (từ %s đến %s).",
+                            conflicts.size(),
+                            pickupTime.format(TIME_FORMATTER),
+                            busyUntil.format(TIME_FORMATTER)))
+                    .pickupTime(pickupTime)
+                    .busyUntil(busyUntil)
+                    .driverId(driverId)
+                    .conflicts(conflictDtos)
+                    .build();
+        }
+    }
+
+    /**
+     * Lấy các chuyến sắp tới / đang diễn ra của khách hàng theo số điện thoại (không cần đăng nhập)
+     */
+    @Transactional(readOnly = true)
+    public List<TripResponse> getUpcomingTripsByPhone(String phone, String baseUrl) {
+        if (phone == null || phone.isBlank()) {
+            throw new CustomException(ErrorCode.BAD_REQUEST, "Số điện thoại không được để trống");
+        }
+        List<Trip> trips = tripRepository.findUpcomingTripsByCustomerPhone(phone.trim());
+        return trips.stream()
+                .map(t -> {
+                    Driver driver = t.getDriverId() != null 
+                            ? driverRepository.findById(t.getDriverId()).orElse(null) : null;
+                    return TripResponse.fromEntity(t, driver, baseUrl);
+                })
+                .toList();
+    }
+
+    /**
+     * Lấy toàn bộ lịch sử các chuyến của khách hàng theo số điện thoại (không cần đăng nhập)
+     */
+    @Transactional(readOnly = true)
+    public List<TripResponse> getAllTripsByPhone(String phone, String baseUrl) {
+        if (phone == null || phone.isBlank()) {
+            throw new CustomException(ErrorCode.BAD_REQUEST, "Số điện thoại không được để trống");
+        }
+        List<Trip> trips = tripRepository.findAllTripsByCustomerPhone(phone.trim());
+        return trips.stream()
+                .map(t -> {
+                    Driver driver = t.getDriverId() != null 
+                            ? driverRepository.findById(t.getDriverId()).orElse(null) : null;
+                    return TripResponse.fromEntity(t, driver, baseUrl);
+                })
+                .toList();
     }
 
     /**

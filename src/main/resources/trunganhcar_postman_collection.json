@@ -1,0 +1,1206 @@
+{
+  "info": {
+    "_postman_id": "a9e1d89b-7c4f-4d92-9cb3-1a2f5c78b401",
+    "name": "Trung Anh Car Booking APIs",
+    "description": "Bộ sưu tập API hoàn chỉnh của hệ thống Trung Anh Car Booking, tương đương và đồng bộ đầy đủ với SpringDoc OpenAPI / Swagger UI. Hỗ trợ sẵn các request mẫu, mô tả chi tiết, query parameters và script tự động lưu JWT token khi đăng nhập.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8080",
+      "type": "string"
+    },
+    {
+      "key": "driverToken",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "1. Booking APIs (Đặt xe & Lịch rảnh)",
+      "description": "Các API phục vụ khách hàng đặt xe, kiểm tra tình trạng khả dụng/xung đột thời gian và tra cứu chuyến sắp tới",
+      "item": [
+        {
+          "name": "1.1 Tạo đơn đặt xe mới",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"customerName\": \"Nguyễn Văn A\",\n  \"customerPhone\": \"0362882882\",\n  \"pickupAddress\": \"Số 1 Tràng Tiền, Hoàn Kiếm, Hà Nội\",\n  \"pickupCoordinates\": \"21.0254,105.8573\",\n  \"dropoffAddress\": \"Sân bay Quốc tế Nội Bài, Phú Cường, Sóc Sơn, Hà Nội\",\n  \"dropoffCoordinates\": \"21.2187,105.8041\",\n  \"distanceKm\": 30.5,\n  \"estimatedPrice\": 350000,\n  \"pickupTime\": \"2026-11-10T09:00:00\",\n  \"driverId\": 1,\n  \"travelTime\": 45,\n  \"bufferMinutes\": 30,\n  \"waitHours\": 1.0,\n  \"isRoundTrip\": false,\n  \"isFixedTrip\": false,\n  \"promotionTripId\": null,\n  \"discountCode\": \"TRUNGANH50K\",\n  \"luggageOption\": \"2 vali lớn, 1 balo\",\n  \"note\": \"Đón đúng giờ giúp em, xe có trẻ nhỏ\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/bookings",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "bookings"]
+            },
+            "description": "Khách hàng tạo đơn đặt xe, sinh mã NanoID ngẫu nhiên (10 ký tự), tự động kiểm tra trùng lặp lịch tài xế, áp mã giảm giá và tự động bắn thông báo Telegram cho tài xế."
+          }
+        },
+        {
+          "name": "1.2 Kiểm tra tình trạng khả dụng / xung đột thời gian (POST)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"pickupTime\": \"2026-11-10T09:50:00\",\n  \"travelTime\": 100,\n  \"distanceKm\": 35.0,\n  \"waitHours\": 0.5,\n  \"bufferMinutes\": 30,\n  \"driverId\": 1,\n  \"isRoundTrip\": false\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/bookings/check-availability",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "bookings", "check-availability"]
+            },
+            "description": "Kiểm tra xem khung giờ dự kiến đón và thời gian bận (busy_until = pickupTime + travelTime + bufferMinutes) có bị xung đột với các chuyến xe liền kề của tài xế không. Ví dụ: Đã nhận cuốc 10h-13h nhưng khách đặt chuyến 9h50-12h sẽ bị báo trùng."
+          }
+        },
+        {
+          "name": "1.3 Kiểm tra tình trạng khả dụng (GET Query Nhanh)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/bookings/check-availability?pickupTime=2026-11-10T09:50:00&travelTime=100&bufferMinutes=30&driverId=1&isRoundTrip=false",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "bookings", "check-availability"],
+              "query": [
+                {
+                  "key": "pickupTime",
+                  "value": "2026-11-10T09:50:00",
+                  "description": "Thời gian đón (ISO: yyyy-MM-dd'T'HH:mm:ss)"
+                },
+                {
+                  "key": "travelTime",
+                  "value": "100",
+                  "description": "Thời gian di chuyển dự kiến (phút)"
+                },
+                {
+                  "key": "distanceKm",
+                  "value": "35.0",
+                  "description": "Quãng đường (km) - tuỳ chọn",
+                  "disabled": true
+                },
+                {
+                  "key": "waitHours",
+                  "value": "0.5",
+                  "description": "Thời gian chờ (giờ) - tuỳ chọn",
+                  "disabled": true
+                },
+                {
+                  "key": "bufferMinutes",
+                  "value": "30",
+                  "description": "Thời gian đệm nghỉ giữa các chuyến (mặc định 30)"
+                },
+                {
+                  "key": "driverId",
+                  "value": "1",
+                  "description": "ID tài xế muốn kiểm tra"
+                },
+                {
+                  "key": "isRoundTrip",
+                  "value": "false",
+                  "description": "Chuyến đi 2 chiều khứ hồi"
+                }
+              ]
+            },
+            "description": "Hỗ trợ query nhanh trên URL để check xem tài xế có rảnh trong khung giờ định đặt hay không."
+          }
+        },
+        {
+          "name": "1.4 Xem danh sách chuyến sắp tới theo SĐT (Không cần login)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/bookings/upcoming?phone=0362882882",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "bookings", "upcoming"],
+              "query": [
+                {
+                  "key": "phone",
+                  "value": "0362882882",
+                  "description": "Số điện thoại của khách hàng đã đặt xe"
+                }
+              ]
+            },
+            "description": "Khách hàng không cần đăng nhập, chỉ cần nhập số điện thoại để tra cứu các chuyến đi sắp tới hoặc đang diễn ra (PENDING, CONFIRMED, ARRIVING, IN_TRIP)."
+          }
+        },
+        {
+          "name": "1.5 Xem toàn bộ lịch sử chuyến theo SĐT (Không cần login)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/bookings/history?phone=0362882882",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "bookings", "history"],
+              "query": [
+                {
+                  "key": "phone",
+                  "value": "0362882882",
+                  "description": "Số điện thoại của khách hàng"
+                }
+              ]
+            },
+            "description": "Khách hàng không cần đăng nhập, tra cứu tất cả chuyến xe đã từng đặt theo số điện thoại (sắp xếp giảm dần theo thời gian đón)."
+          }
+        }
+      ]
+    },
+    {
+      "name": "2. Trip & Tracking APIs (Theo dõi chuyến đi & SSE)",
+      "description": "Các API theo dõi chuyến đi, đăng ký Web Push và lắng nghe sự kiện realtime qua Server-Sent Events",
+      "item": [
+        {
+          "name": "2.1 Lấy thông tin chi tiết chuyến đi (Tracking)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/trips/:code",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "trips", ":code"],
+              "variable": [
+                {
+                  "key": "code",
+                  "value": "aB3dE5gH7j",
+                  "description": "Mã chuyến xe NanoID ngẫu nhiên"
+                }
+              ]
+            },
+            "description": "Lấy chi tiết đơn hàng cho trang tracking của khách hàng qua mã chuyến (NanoID)."
+          }
+        },
+        {
+          "name": "2.2 Lấy VAPID Public Key (Web Push)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/trips/push-key",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "trips", "push-key"]
+            },
+            "description": "Lấy khóa công khai VAPID để Frontend đăng ký PushSubscription với trình duyệt / Service Worker."
+          }
+        },
+        {
+          "name": "2.3 Lưu PushSubscription của khách hàng",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"subscription\": \"{\\\"endpoint\\\":\\\"https://fcm.googleapis.com/fcm/send/sample-token\\\",\\\"keys\\\":{\\\"p256dh\\\":\\\"sample-key\\\",\\\"auth\\\":\\\"sample-auth\\\"}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/trips/:code/push-subscription",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "trips", ":code", "push-subscription"],
+              "variable": [
+                {
+                  "key": "code",
+                  "value": "aB3dE5gH7j",
+                  "description": "Mã chuyến xe NanoID"
+                }
+              ]
+            },
+            "description": "Cập nhật token PushSubscription của trình duyệt khách hàng cho chuyến xe để nhận Web Push thông báo."
+          }
+        },
+        {
+          "name": "2.4 Đăng ký kết nối SSE realtime",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "text/event-stream"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/trips/:code/sse",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "trips", ":code", "sse"],
+              "variable": [
+                {
+                  "key": "code",
+                  "value": "aB3dE5gH7j",
+                  "description": "Mã chuyến xe NanoID"
+                }
+              ]
+            },
+            "description": "Mở kết nối Server-Sent Events (SSE) để nhận sự thay đổi trạng thái cuốc xe realtime không cần reload trang F5."
+          }
+        }
+      ]
+    },
+    {
+      "name": "3. Telegram Webhook APIs (Xử lý Bot)",
+      "description": "Endpoint tiếp nhận webhook từ Telegram Bot khi tài xế bấm các nút tương tác (ACCEPT, REJECT, ARRIVING, DONE...)",
+      "item": [
+        {
+          "name": "3.1 Nhận Webhook từ Telegram Bot",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"update_id\": 10001,\n  \"callback_query\": {\n    \"id\": \"cbq_123456\",\n    \"from\": {\n      \"id\": 8266838059,\n      \"is_bot\": false,\n      \"first_name\": \"Trung Anh\",\n      \"username\": \"trunganh_driver\"\n    },\n    \"message\": {\n      \"message_id\": 999,\n      \"chat\": {\n        \"id\": 8266838059,\n        \"type\": \"private\"\n      }\n    },\n    \"data\": \"ACCEPT:aB3dE5gH7j\"\n  }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/driver/telegram/webhook",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "driver", "telegram", "webhook"]
+            },
+            "description": "Xử lý CallbackQuery khi tài xế bấm nút trên Telegram Bot (ACCEPT: nhận chuyến, REJECT: từ chối, ARRIVING: đã đến điểm đón, DONE: hoàn thành chuyến)."
+          }
+        }
+      ]
+    },
+    {
+      "name": "4. Driver Authentication APIs (Xác thực tài xế)",
+      "description": "Các API Đăng Ký, Đăng Nhập và Demo dành cho Cổng Tài Xế Trung Anh Car",
+      "item": [
+        {
+          "name": "4.1 Đăng ký tài xế mới (Chờ duyệt)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fullName\": \"Vũ Tuấn Anh\",\n  \"phone\": \"0988123456\",\n  \"licensePlate\": \"30K - 999.88\",\n  \"vehicleModel\": \"VinFast Limo Green (VF 8)\",\n  \"vehicleColor\": \"🔴 Đỏ Crimson (Đỏ đô ánh kim)\",\n  \"password\": \"123456\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/driver/register",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "auth", "driver", "register"]
+            },
+            "description": "Đăng ký tài xế mới với họ tên, số điện thoại, biển số xe, dòng xe VinFast và mật khẩu. Tài khoản sau khi đăng ký sẽ ở trạng thái PENDING chờ Admin phê duyệt."
+          }
+        },
+        {
+          "name": "4.2 Đăng nhập tài xế (Tự động lưu Token)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    var json = pm.response.json();",
+                  "    if (json.data && json.data.token) {",
+                  "        pm.collectionVariables.set(\"driverToken\", json.data.token);",
+                  "        console.log(\"Đã lưu driverToken: \" + json.data.token);",
+                  "    }",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"phone\": \"0362882882\",\n  \"password\": \"123456\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/driver/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "auth", "driver", "login"]
+            },
+            "description": "Đăng nhập vào Cổng tài xế bằng Số điện thoại và Mật khẩu. Nếu đăng nhập thành công, Postman Test Script sẽ tự động gán Bearer token vào biến {{driverToken}}."
+          }
+        },
+        {
+          "name": "4.3 Đăng nhập nhanh tài xế mẫu (Demo)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    var json = pm.response.json();",
+                  "    if (json.data && json.data.token) {",
+                  "        pm.collectionVariables.set(\"driverToken\", json.data.token);",
+                  "        console.log(\"Đã lưu driverToken demo: \" + json.data.token);",
+                  "    }",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/driver/demo",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "auth", "driver", "demo"]
+            },
+            "description": "Đăng nhập tức thì với tài xế mẫu Trung Anh (Chủ xe - SĐT: 0362.882.882), tiện lợi để test nhanh các chức năng lịch trình."
+          }
+        }
+      ]
+    },
+    {
+      "name": "5. Driver Management APIs (Quản lý tài xế & Duyệt)",
+      "description": "Các API CRUD quản lý tài xế, phê duyệt và từ chối tài khoản tài xế",
+      "item": [
+        {
+          "name": "5.1 Lấy danh sách tất cả tài xế",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/drivers",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "drivers"],
+              "query": [
+                {
+                  "key": "isActive",
+                  "value": "true",
+                  "description": "Lọc theo trạng thái hoạt động (true/false)",
+                  "disabled": true
+                },
+                {
+                  "key": "approvalStatus",
+                  "value": "APPROVED",
+                  "description": "Lọc theo trạng thái duyệt (PENDING, APPROVED, REJECTED)",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "Xem danh sách toàn bộ tài xế trong hệ thống kèm thông tin xe, số năm kinh nghiệm, đánh giá và trạng thái duyệt."
+          }
+        },
+        {
+          "name": "5.2 Lấy danh sách tài xế đang chờ phê duyệt (PENDING)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/drivers?approvalStatus=PENDING",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "drivers"],
+              "query": [
+                {
+                  "key": "approvalStatus",
+                  "value": "PENDING",
+                  "description": "Lọc tài xế đang chờ duyệt"
+                }
+              ]
+            },
+            "description": "Admin sử dụng API này để theo dõi các tài khoản tài xế mới đăng ký đang chờ phê duyệt."
+          }
+        },
+        {
+          "name": "5.3 Phê duyệt tài khoản tài xế",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/drivers/:id/approve",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "drivers", ":id", "approve"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "2",
+                  "description": "ID của tài xế cần phê duyệt"
+                }
+              ]
+            },
+            "description": "Admin phê duyệt tài xế đăng ký mới, chuyển trạng thái sang APPROVED, kích hoạt tài khoản isActive=true và lưu thời điểm approvedAt."
+          }
+        },
+        {
+          "name": "5.4 Từ chối phê duyệt tài khoản tài xế kèm lý do",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"Ảnh chụp bằng lái xe bị mờ, vui lòng bổ sung lại giấy tờ rõ nét hơn.\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/drivers/:id/reject",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "drivers", ":id", "reject"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "2",
+                  "description": "ID của tài xế bị từ chối"
+                }
+              ]
+            },
+            "description": "Admin từ chối tài xế đăng ký kèm lý do từ chối (chuyển trạng thái sang REJECTED, isActive=false)."
+          }
+        },
+        {
+          "name": "5.5 Lấy chi tiết tài xế theo ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/drivers/:id",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "drivers", ":id"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "1",
+                  "description": "ID tài xế"
+                }
+              ]
+            },
+            "description": "Lấy chi tiết thông tin hồ sơ tài xế theo ID."
+          }
+        },
+        {
+          "name": "5.6 Tạo mới tài xế (Admin thêm trực tiếp)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fullName\": \"Trần Văn C\",\n  \"phone\": \"0977889900\",\n  \"experienceYears\": 6,\n  \"vehicleModel\": \"VinFast VF 8 Plus\",\n  \"vehicleColor\": \"Trắng ngọc trai\",\n  \"seatCount\": 5,\n  \"licensePlate\": \"30H - 567.89\",\n  \"telegramChatId\": \"123456789\",\n  \"avatarUrl\": \"https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150\",\n  \"rating\": 5.0,\n  \"isActive\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/drivers",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "drivers"]
+            },
+            "description": "Thêm tài xế mới trực tiếp từ phía Admin kèm thông tin xe, biển số, kinh nghiệm và chat ID Telegram."
+          }
+        },
+        {
+          "name": "5.7 Cập nhật thông tin tài xế",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fullName\": \"Nguyễn Trung Anh\",\n  \"phone\": \"0362882882\",\n  \"experienceYears\": 9,\n  \"vehicleModel\": \"VinFast VF e34 (Limo Green Edition)\",\n  \"vehicleColor\": \"🔴 Đỏ Crimson (Đỏ đô ánh kim)\",\n  \"seatCount\": 5,\n  \"licensePlate\": \"35H - 182.29\",\n  \"telegramChatId\": \"8266838059\",\n  \"avatarUrl\": \"https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150\",\n  \"rating\": 5.0,\n  \"isActive\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/drivers/:id",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "drivers", ":id"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "1",
+                  "description": "ID tài xế cần cập nhật"
+                }
+              ]
+            },
+            "description": "Cập nhật thông tin cá nhân, phương tiện, biển số hoặc trạng thái tài xế."
+          }
+        },
+        {
+          "name": "5.8 Lấy lịch trình tài xế theo ngày (Quản trị)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/drivers/:id/schedule?date=2026-11-19",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "drivers", ":id", "schedule"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "1",
+                  "description": "ID tài xế"
+                }
+              ],
+              "query": [
+                {
+                  "key": "date",
+                  "value": "2026-11-19",
+                  "description": "Ngày cần xem (yyyy-MM-dd, để trống sẽ lấy hôm nay)"
+                }
+              ]
+            },
+            "description": "Lấy danh sách các chuyến bận (busy_trips) và các khung giờ còn trống (available_slots) của tài xế theo ngày được chọn."
+          }
+        },
+        {
+          "name": "5.9 Xóa tài xế",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/drivers/:id",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "drivers", ":id"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "3",
+                  "description": "ID tài xế cần xóa"
+                }
+              ]
+            },
+            "description": "Xóa tài xế khỏi hệ thống theo ID."
+          }
+        }
+      ]
+    },
+    {
+      "name": "6. Driver Personal Schedule APIs (Lịch trình tài xế đăng nhập)",
+      "description": "Các API Lịch trình cá nhân của tài xế đang đăng nhập (Yêu cầu JWT Bearer Token trong header)",
+      "item": [
+        {
+          "name": "6.1 Xem số chuyến mỗi ngày trong 30 ngày tới",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{driverToken}}",
+                "description": "Token JWT của tài xế đăng nhập"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/driver/my-schedule/next-30-days",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "driver", "my-schedule", "next-30-days"]
+            },
+            "description": "Trả về danh sách 30 ngày kể từ hôm nay, kèm thứ trong tuần, số chuyến xe đã nhận trong từng ngày và đánh dấu ngày hôm nay."
+          }
+        },
+        {
+          "name": "6.2 Xem chi tiết lịch trình hôm nay",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{driverToken}}",
+                "description": "Token JWT của tài xế đăng nhập"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/driver/my-schedule/today",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "driver", "my-schedule", "today"]
+            },
+            "description": "Trả về chi tiết các chuyến bận (busy_trips) và các khung giờ còn trống (available_slots) của tài xế trong ngày hôm nay."
+          }
+        },
+        {
+          "name": "6.3 Xem chi tiết lịch trình theo ngày tùy chọn",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{driverToken}}",
+                "description": "Token JWT của tài xế đăng nhập"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/driver/my-schedule/by-date?date=2026-11-10",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "driver", "my-schedule", "by-date"],
+              "query": [
+                {
+                  "key": "date",
+                  "value": "2026-11-10",
+                  "description": "Ngày cần xem chi tiết (yyyy-MM-dd)"
+                }
+              ]
+            },
+            "description": "Cho phép tài xế xem chi tiết các chuyến bận và khung giờ trống của một ngày cụ thể bất kỳ."
+          }
+        }
+      ]
+    },
+    {
+      "name": "7. Promotion Trip APIs (Gói cước chuyến cố định)",
+      "description": "Các API CRUD quản lý các gói cước chuyến cố định quảng cáo (VD: Đưa đón Sân Bay Nội Bài)",
+      "item": [
+        {
+          "name": "7.1 Lấy danh sách gói cước trang chủ (Tối đa 3 gói)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/promotion-trips?isActive=true",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "promotion-trips"],
+              "query": [
+                {
+                  "key": "isActive",
+                  "value": "true",
+                  "description": "Lọc gói cước đang hoạt động"
+                }
+              ]
+            },
+            "description": "Lấy ra tối đa 3 gói cước chuyến cố định đang hoạt động, sắp xếp theo displayOrder tăng dần để hiển thị trang chủ."
+          }
+        },
+        {
+          "name": "7.2 Lấy danh sách tất cả gói cước (Quản trị, Phân trang)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/promotion-trips/all?page=0&size=10&sort=displayOrder,asc",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "promotion-trips", "all"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "0",
+                  "description": "Số trang (bắt đầu từ 0)"
+                },
+                {
+                  "key": "size",
+                  "value": "10",
+                  "description": "Số lượng bản ghi trên một trang"
+                },
+                {
+                  "key": "sort",
+                  "value": "displayOrder,asc",
+                  "description": "Sắp xếp theo trường và chiều"
+                },
+                {
+                  "key": "isActive",
+                  "value": "true",
+                  "description": "Lọc theo trạng thái hoạt động",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "Lấy danh sách toàn bộ các gói cước có phân trang dùng cho trang quản trị Admin."
+          }
+        },
+        {
+          "name": "7.3 Lấy chi tiết gói cước theo ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/promotion-trips/:id",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "promotion-trips", ":id"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "1",
+                  "description": "ID gói cước cố định"
+                }
+              ]
+            },
+            "description": "Lấy chi tiết gói cước chuyến cố định theo ID."
+          }
+        },
+        {
+          "name": "7.4 Lấy chi tiết gói cước theo Slug (Landing page)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/promotion-trips/slug/:slug",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "promotion-trips", "slug", ":slug"],
+              "variable": [
+                {
+                  "key": "slug",
+                  "value": "dua-don-san-bay-noi-bai",
+                  "description": "Slug của gói cước"
+                }
+              ]
+            },
+            "description": "Lấy chi tiết gói cước theo đường dẫn Slug (thân thiện SEO cho landing page)."
+          }
+        },
+        {
+          "name": "7.5 Tạo mới gói cước chuyến cố định",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"badgeText\": \"TIẾT KIỆM 20%\",\n  \"title\": \"Hà Nội ⇄ Hạ Long Cao Tốc\",\n  \"slug\": \"ha-noi-ha-long-cao-toc\",\n  \"description\": \"Xe riêng đưa đón tận nhà, chạy toàn tuyến cao tốc 5B êm ái\",\n  \"dropoffAddress\": \"Cảng Tuần Châu, Bãi Cháy, TP Hạ Long, Quảng Ninh\",\n  \"travelTime\": 120,\n  \"price\": 1200000,\n  \"priceUnit\": \"/ Trọn gói 1 chiều\",\n  \"extraKmPrice\": 12000,\n  \"extraKmNote\": \"12.000 đ/km cự ly phát sinh\",\n  \"waitingFeeNote\": \"Miễn phí chờ 30 phút\",\n  \"features\": [\n    \"Bao trọn vé cầu đường cao tốc\",\n    \"Nước suối và khăn lạnh miễn phí\",\n    \"Dừng nghỉ theo yêu cầu của quý khách\"\n  ],\n  \"buttonText\": \"Đặt xe ngay\",\n  \"displayOrder\": 2,\n  \"isFeatured\": true,\n  \"isActive\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/promotion-trips",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "promotion-trips"]
+            },
+            "description": "Tạo gói cước chuyến cố định mới cho chiến dịch quảng cáo."
+          }
+        },
+        {
+          "name": "7.6 Cập nhật thông tin gói cước chuyến cố định",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"badgeText\": \"ĐẶT NHIỀU NHẤT\",\n  \"title\": \"Đưa Đón Sân Bay Nội Bài\",\n  \"slug\": \"dua-don-san-bay-noi-bai\",\n  \"description\": \"Chuyến bay kịp giờ, khoang cốp rộng chứa 3-4 vali lớn\",\n  \"dropoffAddress\": \"Sân bay Quốc tế Nội Bài, Phú Cường, Sóc Sơn, Hà Nội\",\n  \"travelTime\": 45,\n  \"price\": 250000,\n  \"priceUnit\": \"/ Trọn gói từ nội thành\",\n  \"extraKmPrice\": 11900,\n  \"extraKmNote\": \"11.900 đ/km cự ly xa\",\n  \"waitingFeeNote\": \"Miễn phí chờ khi delay chuyến bay\",\n  \"features\": [\n    \"Theo dõi giờ hạ cánh qua số hiệu chuyến bay\",\n    \"Tài xế chủ động đến sớm 10 phút\",\n    \"Miễn phí chờ đợi khi delay\"\n  ],\n  \"buttonText\": \"Chọn gói cước này\",\n  \"displayOrder\": 1,\n  \"isFeatured\": true,\n  \"isActive\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/promotion-trips/:id",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "promotion-trips", ":id"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "1",
+                  "description": "ID gói cước cần cập nhật"
+                }
+              ]
+            },
+            "description": "Cập nhật giá, mô tả, quyền lợi hoặc trạng thái của gói cước cố định."
+          }
+        },
+        {
+          "name": "7.7 Xóa gói cước chuyến cố định",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/promotion-trips/:id",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "promotion-trips", ":id"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "2",
+                  "description": "ID gói cước cần xóa"
+                }
+              ]
+            },
+            "description": "Xóa gói cước chuyến cố định theo ID."
+          }
+        }
+      ]
+    },
+    {
+      "name": "8. Discount / Voucher APIs (Mã giảm giá)",
+      "description": "Các API Quản lý và Áp dụng mã giảm giá / Voucher cho chuyến đi",
+      "item": [
+        {
+          "name": "8.1 Lấy danh sách mã giảm giá đang hoạt động (Cho khách)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/discounts/active",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "discounts", "active"]
+            },
+            "description": "Xem các voucher đang có hiệu lực và chưa hết hạn để khách hàng bấm áp dụng trực tiếp trên giao diện đặt xe."
+          }
+        },
+        {
+          "name": "8.2 Kiểm tra và tính tiền mã giảm giá khi đặt xe",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"code\": \"TRUNGANH50K\",\n  \"tripPrice\": 250000\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/discounts/validate",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "discounts", "validate"]
+            },
+            "description": "Frontend gọi API này khi khách hàng nhập mã giảm giá để kiểm tra tính hợp lệ và lấy số tiền được giảm cùng giá cuối cùng."
+          }
+        },
+        {
+          "name": "8.3 Lấy danh sách mã giảm giá (Quản trị, Phân trang)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/discounts?page=0&size=10&sort=createdAt,desc",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "discounts"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "0",
+                  "description": "Trang cần xem"
+                },
+                {
+                  "key": "size",
+                  "value": "10",
+                  "description": "Số lượng bản ghi trên một trang"
+                },
+                {
+                  "key": "sort",
+                  "value": "createdAt,desc",
+                  "description": "Sắp xếp"
+                },
+                {
+                  "key": "isActive",
+                  "value": "true",
+                  "description": "Lọc theo trạng thái hoạt động",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "Xem danh sách mã giảm giá trong hệ thống dành cho Admin."
+          }
+        },
+        {
+          "name": "8.4 Lấy chi tiết mã giảm giá theo ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/discounts/:id",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "discounts", ":id"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "1",
+                  "description": "ID mã giảm giá"
+                }
+              ]
+            },
+            "description": "Lấy chi tiết mã giảm giá theo ID."
+          }
+        },
+        {
+          "name": "8.5 Lấy chi tiết mã giảm giá theo Code",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/discounts/code/:code",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "discounts", "code", ":code"],
+              "variable": [
+                {
+                  "key": "code",
+                  "value": "TRUNGANH50K",
+                  "description": "Mã giảm giá (viết hoa)"
+                }
+              ]
+            },
+            "description": "Tìm kiếm thông tin mã giảm giá bằng mã code."
+          }
+        },
+        {
+          "name": "8.6 Tạo mới mã giảm giá (FIXED_AMOUNT hoặc PERCENTAGE)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"code\": \"GIAM100K\",\n  \"title\": \"Voucher đặc biệt tri ân\",\n  \"description\": \"Giảm ngay 100k cho chuyến đi xa từ 500.000đ\",\n  \"discountType\": \"FIXED_AMOUNT\",\n  \"discountValue\": 100000,\n  \"minTripPrice\": 500000,\n  \"usageLimit\": 50,\n  \"startAt\": \"2026-11-01T00:00:00\",\n  \"endAt\": \"2026-12-31T23:59:59\",\n  \"isActive\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/discounts",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "discounts"]
+            },
+            "description": "Tạo mã giảm giá mới (theo số tiền cố định FIXED_AMOUNT hoặc theo tỷ lệ phần trăm PERCENTAGE)."
+          }
+        },
+        {
+          "name": "8.7 Cập nhật mã giảm giá",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"code\": \"TRUNGANH50K\",\n  \"title\": \"Giảm ngay 50.000đ chuyến sân bay\",\n  \"description\": \"Áp dụng cho mọi chuyến xe có giá trị từ 200.000đ trở lên\",\n  \"discountType\": \"FIXED_AMOUNT\",\n  \"discountValue\": 50000,\n  \"minTripPrice\": 200000,\n  \"usageLimit\": 200,\n  \"startAt\": \"2026-11-01T00:00:00\",\n  \"endAt\": \"2026-12-31T23:59:59\",\n  \"isActive\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/discounts/:id",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "discounts", ":id"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "1",
+                  "description": "ID mã giảm giá"
+                }
+              ]
+            },
+            "description": "Cập nhật thông tin, điều kiện áp dụng hoặc thời hạn của mã giảm giá."
+          }
+        },
+        {
+          "name": "8.8 Xóa mã giảm giá",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/discounts/:id",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "discounts", ":id"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "3",
+                  "description": "ID mã giảm giá"
+                }
+              ]
+            },
+            "description": "Xóa mã giảm giá theo ID."
+          }
+        }
+      ]
+    },
+    {
+      "name": "9. Banner Management APIs (Quản lý Banner quảng cáo)",
+      "description": "Các API quản lý và hiển thị banner chiến dịch quảng cáo ngoài trang chủ",
+      "item": [
+        {
+          "name": "9.1 Lấy danh sách banner trang chủ (Frontend)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/banners",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "banners"]
+            },
+            "description": "Trả về danh sách các banner đang ACTIVE và trong thời hạn hiển thị, sắp xếp theo displayOrder tăng dần."
+          }
+        },
+        {
+          "name": "9.2 Lấy danh sách tất cả banner (Quản trị, Phân trang)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/banners/all?page=0&size=10&sort=displayOrder,asc",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "banners", "all"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "0",
+                  "description": "Trang"
+                },
+                {
+                  "key": "size",
+                  "value": "10",
+                  "description": "Kích thước trang"
+                },
+                {
+                  "key": "sort",
+                  "value": "displayOrder,asc",
+                  "description": "Sắp xếp"
+                },
+                {
+                  "key": "status",
+                  "value": "ACTIVE",
+                  "description": "Lọc theo trạng thái (ACTIVE / INACTIVE)",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "Lấy danh sách tất cả banner quản trị kèm phân trang."
+          }
+        },
+        {
+          "name": "9.3 Lấy chi tiết banner theo ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/banners/:id",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "banners", ":id"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "1",
+                  "description": "ID banner"
+                }
+              ]
+            },
+            "description": "Lấy thông tin chi tiết banner theo ID."
+          }
+        },
+        {
+          "name": "9.4 Tạo mới banner",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Trực Ninh ⇄ Nội Bài - Chỉ 900K\",\n  \"tagline\": \"Đặt xe VinFast Limo Green trọn gói 900k/chuyến (Bao trọn xe) • Đón trả tận nơi\",\n  \"badge\": \"HOT DEAL 900K\",\n  \"image\": \"/banner_truc_ninh_noi_bai.png\",\n  \"alt\": \"Đặt xe VinFast Limo Green từ Trực Ninh đến Nội Bài chỉ 900k Trung Anh Car\",\n  \"actionText\": \"Đặt xe đi sân bay ngay\",\n  \"actionUrl\": \"/booking?route=truc-ninh-noi-bai\",\n  \"isGraphicBanner\": true,\n  \"displayOrder\": 1,\n  \"status\": \"ACTIVE\",\n  \"startAt\": \"2026-11-01T00:00:00\",\n  \"endAt\": \"2026-12-31T23:59:59\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/banners",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "banners"]
+            },
+            "description": "Tạo banner chiến dịch quảng cáo mới."
+          }
+        },
+        {
+          "name": "9.5 Cập nhật thông tin banner",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Trực Ninh ⇄ Nội Bài - Chỉ 900K (Cập nhật)\",\n  \"tagline\": \"Đặt xe VinFast Limo Green trọn gói 900k/chuyến (Bao trọn xe) • Đón trả tận nơi\",\n  \"badge\": \"HOT DEAL 900K\",\n  \"image\": \"/banner_truc_ninh_noi_bai.png\",\n  \"alt\": \"Đặt xe VinFast Limo Green\",\n  \"actionText\": \"Đặt xe ngay\",\n  \"actionUrl\": \"/booking?route=truc-ninh-noi-bai\",\n  \"isGraphicBanner\": true,\n  \"displayOrder\": 1,\n  \"status\": \"ACTIVE\",\n  \"startAt\": \"2026-11-01T00:00:00\",\n  \"endAt\": \"2026-12-31T23:59:59\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/banners/:id",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "banners", ":id"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "1",
+                  "description": "ID banner cần cập nhật"
+                }
+              ]
+            },
+            "description": "Cập nhật banner."
+          }
+        },
+        {
+          "name": "9.6 Xóa banner",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/banners/:id",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "banners", ":id"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "2",
+                  "description": "ID banner cần xóa"
+                }
+              ]
+            },
+            "description": "Xóa banner khỏi hệ thống theo ID."
+          }
+        }
+      ]
+    },
+    {
+      "name": "10. Utilities & Call APIs (Tiện ích chuyển tiếp cuộc gọi)",
+      "description": "Endpoint chuyển tiếp cuộc gọi điện thoại cho Telegram Inline Button",
+      "item": [
+        {
+          "name": "10.1 Chuyển hướng cuộc gọi (Redirect tel:{phone})",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/call/:phone",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "call", ":phone"],
+              "variable": [
+                {
+                  "key": "phone",
+                  "value": "0362882882",
+                  "description": "Số điện thoại cần gọi"
+                }
+              ]
+            },
+            "description": "Endpoint chuyển hướng 302 Found sang URL protocol tel:{phone}, giúp vượt qua giới hạn của nút bấm Telegram Bot chỉ cho phép giao thức http/https."
+          }
+        }
+      ]
+    }
+  ]
+}
+

@@ -27,7 +27,7 @@ public class DriverAuthService {
     private static final String DEMO_PHONE = "0362882882";
 
     /**
-     * Đăng ký tài xế mới (người dùng tự nhập mật khẩu)
+     * Đăng ký tài xế mới (yêu cầu Admin phê duyệt trước khi được đăng nhập)
      */
     @Transactional
     public DriverAuthResponse register(DriverRegisterRequest request) {
@@ -69,23 +69,22 @@ public class DriverAuthService {
                 .password(passwordEncoder.encode(request.getPassword().trim()))
                 .experienceYears(1)
                 .rating(5.0)
-                .isActive(true)
+                .approvalStatus("PENDING") // Chờ Admin phê duyệt
+                .isActive(false)          // Chưa kích hoạt cho đến khi được duyệt
                 .build();
 
         Driver saved = driverRepository.save(driver);
-        log.info("Đăng ký tài xế thành công ID: {}", saved.getId());
-
-        String token = jwtTokenProvider.generateToken(saved.getId(), saved.getPhone(), saved.getFullName());
+        log.info("Đăng ký tài xế thành công ID: {}. Đang chờ Admin phê duyệt.", saved.getId());
 
         return DriverAuthResponse.builder()
-                .token(token)
-                .tokenType("Bearer")
+                .token(null)
+                .tokenType(null)
                 .driver(DriverResponse.fromEntity(saved))
                 .build();
     }
 
     /**
-     * Đăng nhập tài xế bằng Số điện thoại và Mật khẩu
+     * Đăng nhập tài xế bằng Số điện thoại và Mật khẩu (Kiểm tra trạng thái duyệt và khóa tài khoản)
      */
     @Transactional(readOnly = true)
     public DriverAuthResponse login(DriverLoginRequest request) {
@@ -97,6 +96,20 @@ public class DriverAuthService {
 
         if (driver.getPassword() == null || !passwordEncoder.matches(request.getPassword(), driver.getPassword())) {
             throw new CustomException(ErrorCode.INVALID_CREDENTIALS);
+        }
+
+        // Kiểm tra trạng thái phê duyệt của tài xế
+        if ("PENDING".equalsIgnoreCase(driver.getApprovalStatus())) {
+            throw new CustomException("Tài khoản của bạn đang chờ Admin phê duyệt. Vui lòng liên hệ Admin để được kích hoạt!");
+        }
+
+        if ("REJECTED".equalsIgnoreCase(driver.getApprovalStatus())) {
+            String reason = driver.getRejectionReason() != null ? driver.getRejectionReason() : "Thông tin chưa đạt yêu cầu";
+            throw new CustomException("Tài khoản của bạn đã bị từ chối phê duyệt. Lý do: " + reason);
+        }
+
+        if (Boolean.FALSE.equals(driver.getIsActive())) {
+            throw new CustomException(ErrorCode.DRIVER_INACTIVE, "Tài khoản tài xế hiện đang bị khóa hoặc ngưng hoạt động!");
         }
 
         String token = jwtTokenProvider.generateToken(driver.getId(), driver.getPhone(), driver.getFullName());
@@ -125,10 +138,18 @@ public class DriverAuthService {
                     .licensePlate("30K - 868.86")
                     .experienceYears(5)
                     .rating(5.0)
+                    .approvalStatus("APPROVED")
                     .isActive(true)
                     .build();
             return driverRepository.save(newDemo);
         });
+
+        // Đảm bảo tài xế demo luôn ở trạng thái APPROVED và ACTIVE
+        if (!"APPROVED".equalsIgnoreCase(driver.getApprovalStatus()) || Boolean.FALSE.equals(driver.getIsActive())) {
+            driver.setApprovalStatus("APPROVED");
+            driver.setIsActive(true);
+            driver = driverRepository.save(driver);
+        }
 
         String token = jwtTokenProvider.generateToken(driver.getId(), driver.getPhone(), driver.getFullName());
 

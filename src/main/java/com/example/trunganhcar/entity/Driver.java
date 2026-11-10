@@ -10,7 +10,8 @@ import java.time.LocalDateTime;
 @Entity
 @Table(name = "drivers", indexes = {
         @Index(name = "idx_driver_phone", columnList = "phone", unique = true),
-        @Index(name = "idx_driver_license_plate", columnList = "license_plate", unique = true)
+        @Index(name = "idx_driver_license_plate", columnList = "license_plate", unique = true),
+        @Index(name = "idx_driver_approval_status", columnList = "approval_status")
 })
 @Getter
 @Setter
@@ -66,9 +67,22 @@ public class Driver {
     @Builder.Default
     private Double rating = 5.0;
 
+    /**
+     * Trạng thái phê duyệt tài xế: PENDING (chờ duyệt), APPROVED (đã duyệt), REJECTED (từ chối)
+     */
+    @Column(name = "approval_status", length = 30, nullable = false)
+    @Builder.Default
+    private String approvalStatus = "PENDING";
+
+    @Column(name = "rejection_reason", length = 255)
+    private String rejectionReason;
+
+    @Column(name = "approved_at")
+    private LocalDateTime approvedAt;
+
     @Column(name = "is_active", nullable = false)
     @Builder.Default
-    private Boolean isActive = true;
+    private Boolean isActive = false;
 
     @CreatedDate
     @Column(name = "created_at", updatable = false, nullable = true)

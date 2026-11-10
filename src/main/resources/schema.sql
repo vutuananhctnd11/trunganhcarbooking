@@ -1,6 +1,6 @@
 -- Thêm tài xế mẫu nếu chưa tồn tại (tài xế demo theo ảnh)
-INSERT INTO drivers (full_name, phone, password, experience_years, vehicle_model, seat_count, license_plate, is_active, vehicle_color, bio)
-SELECT 'Trung Anh', '0362882882', '$2a$10$N.zmdr9k7uOCQb376NoUnuTJ8iAt6Z5EHsM8lE9lBOsl7iKTVKIUi', 8, 'VinFast VF e34 (Limo Green Edition)', 5, '35H - 182.29', TRUE, '🔴 Đỏ Crimson (Đỏ đô ánh kim)', 'Kinh nghiệm 8+ năm • Lái xe cẩn thận, chu đáo'
+INSERT INTO drivers (full_name, phone, password, experience_years, vehicle_model, seat_count, license_plate, is_active, vehicle_color, bio, approval_status)
+SELECT 'Trung Anh', '0362882882', '$2a$10$N.zmdr9k7uOCQb376NoUnuTJ8iAt6Z5EHsM8lE9lBOsl7iKTVKIUi', 8, 'VinFast VF e34 (Limo Green Edition)', 5, '35H - 182.29', TRUE, '🔴 Đỏ Crimson (Đỏ đô ánh kim)', 'Kinh nghiệm 8+ năm • Lái xe cẩn thận, chu đáo', 'APPROVED'
 WHERE NOT EXISTS (SELECT 1 FROM drivers WHERE phone = '0362882882');
 
 -- Thêm gói cước chuyến cố định mẫu theo ảnh nếu chưa tồn tại

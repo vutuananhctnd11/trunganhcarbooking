@@ -1,6 +1,7 @@
 package com.example.trunganhcar.controller;
 
 import com.example.trunganhcar.dto.ApiResponse;
+import com.example.trunganhcar.dto.DriverRejectRequest;
 import com.example.trunganhcar.dto.DriverRequest;
 import com.example.trunganhcar.dto.DriverResponse;
 import com.example.trunganhcar.dto.DriverScheduleResponse;
@@ -17,7 +18,7 @@ import org.springframework.web.bind.annotation.*;
 import java.time.LocalDate;
 import java.util.List;
 
-@Tag(name = "4. Driver Management APIs", description = "Các API CRUD quản lý thông tin tài xế và phương tiện")
+@Tag(name = "4. Driver Management APIs", description = "Các API CRUD quản lý thông tin tài xế và phê duyệt tài khoản tài xế")
 @RestController
 @RequestMapping("/api/v1/drivers")
 @RequiredArgsConstructor
@@ -36,12 +37,31 @@ public class DriverController {
                 .body(ApiResponse.created("Tạo mới tài xế thành công", response));
     }
 
-    @Operation(summary = "Lấy danh sách tài xế", description = "Xem toàn bộ tài xế trong hệ thống, có thể lọc theo isActive=true/false")
+    @Operation(summary = "Phê duyệt tài khoản tài xế", description = "Admin phê duyệt tài xế đăng ký mới, chuyển trạng thái sang APPROVED và kích hoạt tài khoản")
+    @PostMapping("/{id}/approve")
+    public ResponseEntity<ApiResponse<DriverResponse>> approveDriver(@PathVariable Long id) {
+        DriverResponse response = driverService.approveDriver(id);
+        return ResponseEntity.ok(ApiResponse.success("Phê duyệt tài xế thành công", response));
+    }
+
+    @Operation(summary = "Từ chối phê duyệt tài khoản tài xế", description = "Admin từ chối tài xế đăng ký kèm lý do từ chối")
+    @PostMapping("/{id}/reject")
+    public ResponseEntity<ApiResponse<DriverResponse>> rejectDriver(
+            @PathVariable Long id,
+            @RequestBody(required = false) DriverRejectRequest request) {
+        String reason = request != null ? request.getReason() : null;
+        DriverResponse response = driverService.rejectDriver(id, reason);
+        return ResponseEntity.ok(ApiResponse.success("Đã từ chối tài xế", response));
+    }
+
+    @Operation(summary = "Lấy danh sách tài xế", description = "Xem toàn bộ tài xế trong hệ thống, có thể lọc theo isActive=true/false hoặc approvalStatus (PENDING, APPROVED, REJECTED)")
     @GetMapping
     public ResponseEntity<ApiResponse<List<DriverResponse>>> getAllDrivers(
             @Parameter(description = "Lọc theo trạng thái hoạt động (true/false)")
-            @RequestParam(required = false) Boolean isActive) {
-        List<DriverResponse> response = driverService.getAllDrivers(isActive);
+            @RequestParam(required = false) Boolean isActive,
+            @Parameter(description = "Lọc theo trạng thái phê duyệt (PENDING, APPROVED, REJECTED)")
+            @RequestParam(required = false) String approvalStatus) {
+        List<DriverResponse> response = driverService.getAllDrivers(isActive, approvalStatus);
         return ResponseEntity.ok(ApiResponse.success(response));
     }
 
